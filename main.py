@@ -94,7 +94,7 @@ def main(stdscr):
         elif key == curses.KEY_RIGHT: azimuth = (azimuth + 5) % 360
         elif key == curses.KEY_UP: alt = min(90, alt + 5)
         elif key == curses.KEY_DOWN: alt = max(-90, alt - 5)
-        elif key == ord('w'): fov = max(1.0, fov - 1.0)
+        elif key == ord('w'): fov = max(0.1, fov - 1.0)
         elif key == ord('s'): fov += 1.0
 
 if __name__ == "__main__":
