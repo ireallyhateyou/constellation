@@ -1,2 +1,2 @@
 # constellation
-view with terminal
+view the galaxy with ur terminal

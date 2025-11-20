@@ -21,6 +21,7 @@ def main(stdscr):
     # configuration for spaceslop
     lat = 40.7128 # this is NYC btw
     long = -74.0060
+    focused_body = 'Moon' # body we focus on
 
     curses.curs_set(0)
     stdscr.nodelay(1)
@@ -54,10 +55,19 @@ def main(stdscr):
     stars = Star.from_dataframe(bright_stars) # cast into skyfield object
 
     ### main drawing loop
-    while True: 
+    while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()
         t = ts.now()
+        center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
+        projection = build_stereographic_projection(center_position)
+
+        if fov <= 0.1 and focused_body in bodies:
+            ## update camera on our focused body if fov is locked in
+            center_obj = observer.at(t).observe(bodies[focused_body])
+            center_az, center_alt, _ = center_obj.apparent().altaz()            
+            azimuth = center_az.degrees
+            alt = center_alt.degrees
         center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
         projection = build_stereographic_projection(center_position)
 
@@ -69,17 +79,19 @@ def main(stdscr):
             screen_x = (x_stars[i] / (fov/2) + 1) * (w / 2)
             screen_y = (-y_stars[i] / (fov/2) + 1) * (h / 2)
             if 0 <= screen_x < w and 0 <= screen_y < h:
-                mag_index = min(int(mags[i]), len(scale)-1)
+                mag_value = mags[i] # a larger index for larger magnitude (dimmer stars)
+                mag_index = int(max(0, (3.5 - mag_value) * 9 / 3.5)) # scale from 0 to 9
+                mag_index = min(mag_index, len(scale)-1)
                 stdscr.addch(int(screen_y), int(screen_x), scale[mag_index])
         
-        ## draw bodies
+        ## draw celestial bodies
         for name, body in bodies.items():
             astrometric = observer.at(t).observe(body)
             x_body, y_body = projection(astrometric)
             screen_x = (x_body / (fov/2) + 1) * (w / 2)
             screen_y = (-y_body / (fov/2) + 1) * (h / 2)
             if 0 <= screen_x < w and 0 <= screen_y < h:
-                if fov == 1.0: # show full name
+                if fov <= 1.0: # show 
                     stdscr.addstr(int(screen_y), int(screen_x), name[0:3], curses.A_BOLD)
                 else:
                     stdscr.addch(int(screen_y), int(screen_x), name[0], curses.A_BOLD)
@@ -87,8 +99,8 @@ def main(stdscr):
         ### controls
         stdscr.addstr(0, 0, f"Az: {azimuth:.0f} Alt: {alt:.0f} Zoom: {fov:.1f} | arrows to move, w to zoom, s to unzoom, q to quit")
         key = stdscr.getch()
-        
-        # input
+
+        ## input
         if key == ord('q'): break
         elif key == curses.KEY_LEFT: azimuth = (azimuth - 5) % 360
         elif key == curses.KEY_RIGHT: azimuth = (azimuth + 5) % 360
