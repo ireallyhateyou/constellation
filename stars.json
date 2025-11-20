@@ -1,0 +1,11 @@
+{
+    "Orion": [
+      {"name": "Betelgeuse", "ra": 88.7929, "dec": 7.4071, "mag": 0.42},
+      {"name": "Rigel", "ra": 78.6345, "dec": -8.2016, "mag": 0.13},
+      {"name": "Bellatrix", "ra": 81.2828, "dec": 6.3497, "mag": 1.64}
+    ],
+    "Cassiopeia": [
+      {"name": "Schedar", "ra": 10.1260, "dec": 56.5373, "mag": 2.24},
+      {"name": "Caph", "ra": 2.2930, "dec": 59.1498, "mag": 2.28}
+    ]
+}
