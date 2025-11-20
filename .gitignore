@@ -1,3 +1,10 @@
+# NASA files
+de421.bsp
+hip_main.dat
+
+# i don't want my shit code on gh :skull:
+test.py 
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

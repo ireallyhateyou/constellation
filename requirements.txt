@@ -1,1 +1,4 @@
-curses
+windows-curses
+skyfield
+pandas
+matplotlib
