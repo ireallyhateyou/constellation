@@ -9,6 +9,17 @@ from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
 
+def draw_circle(stdscr, center_y, center_x, radius, charmap):
+    h, w = stdscr.getmaxyx()
+    for y in range(h):
+        for x in range(w):
+            dy = y - center_y
+            dx = x - center_x
+            distance = math.sqrt(dx*dx + dy*dy)
+            if distance <= radius:
+                shade_index = int((distance / radius) * (len(charmap) - 1))
+                stdscr.addch(y, x, charmap[shade_index])
+
 def main(stdscr):
     # configuration for ASCII art and camera
     h = 24
@@ -23,6 +34,7 @@ def main(stdscr):
     long = -74.0060
     focused_body = 'Moon' # body we focus on
 
+    # terminal stuff
     curses.curs_set(0)
     stdscr.nodelay(1)
     stdscr.timeout(50)
@@ -103,10 +115,10 @@ def main(stdscr):
                 else:
                     stdscr.addch(int(screen_y), int(screen_x), name[0], curses.A_BOLD)
 
+        ## draw focus panel when you zoom in
         if fov <= 0.1 and body_data:  
-            ## draw focus panel for body
             panel_lines = [
-                f"--- FOCUS: {body_data['name']} ---",
+                f"--- {body_data['name']} ---",
                 f" Distance: {body_data['dist']:.2f} AU",
                 #f" Mag: {body_data['mag']:.2f}" if body_data['mag'] is not None else " Mag: N/A",
                 f" RA: {body_data['ra'].hours:6.2f}h",
