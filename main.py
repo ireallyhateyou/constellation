@@ -83,7 +83,7 @@ def main(stdscr):
                 mag_index = int(max(0, (3.5 - mag_value) * 9 / 3.5)) # scale from 0 to 9
                 mag_index = min(mag_index, len(scale)-1)
                 stdscr.addch(int(screen_y), int(screen_x), scale[mag_index])
-        
+
         ## draw celestial bodies
         for name, body in bodies.items():
             astrometric = observer.at(t).observe(body)
