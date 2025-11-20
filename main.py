@@ -85,17 +85,41 @@ def main(stdscr):
                 stdscr.addch(int(screen_y), int(screen_x), scale[mag_index])
 
         ## draw celestial bodies
+        body_data = {}
         for name, body in bodies.items():
             astrometric = observer.at(t).observe(body)
             x_body, y_body = projection(astrometric)
             screen_x = (x_body / (fov/2) + 1) * (w / 2)
             screen_y = (-y_body / (fov/2) + 1) * (h / 2)
+            if name == focused_body and fov <= 0.1:
+                distance_au = astrometric.distance().au
+                mag_val = None # TODO: get v-band magnitude myself
+                ra, dec, _ = astrometric.radec()
+                body_data = { 'name': name, 'dist': distance_au, 
+                             'mag': mag_val, 'ra': ra, 'dec': dec }
             if 0 <= screen_x < w and 0 <= screen_y < h:
                 if fov <= 1.0: # show 
                     stdscr.addstr(int(screen_y), int(screen_x), name[0:3], curses.A_BOLD)
                 else:
                     stdscr.addch(int(screen_y), int(screen_x), name[0], curses.A_BOLD)
 
+        if fov <= 0.1 and body_data:  
+            ## draw focus panel for body
+            panel_lines = [
+                f"--- FOCUS: {body_data['name']} ---",
+                f" Distance: {body_data['dist']:.2f} AU",
+                #f" Mag: {body_data['mag']:.2f}" if body_data['mag'] is not None else " Mag: N/A",
+                f" RA: {body_data['ra'].hours:6.2f}h",
+                f" Dec: {body_data['dec'].degrees:6.2f}\u00b0" # degree symbol
+            ]
+            
+            # print it, make sure it fits.
+            start_col = w - 30 
+            start_row = 1
+            for i, line in enumerate(panel_lines):
+                if start_col >= 0 and start_row + i < h:
+                    stdscr.addstr(start_row + i, start_col, line)
+                    
         ### controls
         stdscr.addstr(0, 0, f"Az: {azimuth:.0f} Alt: {alt:.0f} Zoom: {fov:.1f} | arrows to move, w to zoom, s to unzoom, q to quit")
         key = stdscr.getch()
