@@ -53,14 +53,15 @@ def main(stdscr):
     bright_stars = df[df['magnitude'] <= 3.5]
     stars = Star.from_dataframe(bright_stars) # cast into skyfield object
 
-    while True: ### main drawing loop
+    ### main drawing loop
+    while True: 
         stdscr.clear()
         h, w = stdscr.getmaxyx()
         t = ts.now()
         center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
         projection = build_stereographic_projection(center_position)
 
-        # draw stars
+        ## draw stars
         astrometric = observer.at(t).observe(stars)
         x_stars, y_stars = projection(astrometric)
         mags = bright_stars['magnitude'].values
@@ -71,7 +72,7 @@ def main(stdscr):
                 mag_index = min(int(mags[i]), len(scale)-1)
                 stdscr.addch(int(screen_y), int(screen_x), scale[mag_index])
         
-        # draw bodies
+        ## draw bodies
         for name, body in bodies.items():
             astrometric = observer.at(t).observe(body)
             x_body, y_body = projection(astrometric)
@@ -93,8 +94,8 @@ def main(stdscr):
         elif key == curses.KEY_RIGHT: azimuth = (azimuth + 5) % 360
         elif key == curses.KEY_UP: alt = min(90, alt + 5)
         elif key == curses.KEY_DOWN: alt = max(-90, alt - 5)
-        elif key == ord('w'): fov += 1.0
-        elif key == ord('s'): fov = max(1.0, fov - 1.0)
+        elif key == ord('w'): fov = max(1.0, fov - 1.0)
+        elif key == ord('s'): fov += 1.0
 
 if __name__ == "__main__":
     curses.wrapper(main)
