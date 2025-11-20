@@ -53,5 +53,18 @@ def main(stdscr):
     bright_stars = df[df['magnitude'] <= 3.5]
     stars = Star.from_dataframe(bright_stars)
 
+    while True: # main drawing loop
+        stdscr.clear()
+        h, w = stdscr.getmaxyx()
+        t = ts.now()
+        center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
+        projection = build_stereographic_projection(center_position)
+
+        # draw stars
+        astrometric = observer.at(t).observe(stars)
+        x_stars, y_stars = projection(astrometric)
+        mags = bright_stars['magnitude'].values
+        print(mags)
+
 if __name__ == "__main__":
     curses.wrapper(main)
