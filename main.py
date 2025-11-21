@@ -9,7 +9,7 @@ from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
 
-def draw_circle(stdscr, y, x, radius, charmap):
+def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
     center_y = int(y)
     center_x = int(x)
     h, w = stdscr.getmaxyx()
@@ -23,7 +23,13 @@ def draw_circle(stdscr, y, x, radius, charmap):
             if center_y + dy < 0 or center_y + dy >= h or center_x + dx < 0 or center_x + dx >= w:
                 continue # dont draw outside bounds
             # shading
-            shade_char = charmap[len(charmap) - 1 - char_index]
+            lit_threshold = (illumination * 2 - 1) * (radius * 2) 
+            if dx < lit_threshold:
+                # enlightened part
+                shade_char = charmap[len(charmap) - 1 - char_index]
+            else:
+                # shadowed part
+                shade_char = charmap[0]
             stdscr.addch(center_y + dy, center_x + dx, shade_char)
 
 def main(stdscr):
@@ -47,6 +53,11 @@ def main(stdscr):
     stdscr.nodelay(1)
     stdscr.timeout(50)
     sh, sw = stdscr.getmaxyx() # fetch terminal size
+    h = sh 
+    w = sw 
+    stdscr.addstr(h//2, w//2 - 26, "downloading planet data...")
+    stdscr.refresh()
+
     # colours
     if curses.has_colors():
         curses.start_color()
@@ -54,10 +65,6 @@ def main(stdscr):
         curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
         curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
         curses.init_pair(4, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-    h = sh 
-    w = sw 
-    stdscr.addstr(h//2, w//2 - 26, "downloading planet data...")
-    stdscr.refresh()
 
     ## jpl ephemeris - https://ssd.jpl.nasa.gov/ephem.html
     ts = load.timescale()
@@ -129,16 +136,22 @@ def main(stdscr):
             x_body, y_body = projection(astrometric)
             screen_x = (x_body / (fov/2) + 1) * (w / 2)
             screen_y = (-y_body / (fov/2) + 1) * (h / 2)
+            illum_data = None
             if name == focused_body and fov <= deepzoom_fov:
-                # Draw the planet preview circle
+                sun = planets['sun']
+                illum_data = body.at(t).observe(sun).fraction_illuminated(earth)
+            if name == focused_body and fov <= deepzoom_fov:
+                # draw our circle with illumination
                 if 0 <= screen_x < w and 0 <= screen_y < h:
-                    draw_circle(stdscr, screen_y, screen_x, preview_radius, scale)
-                # Calculate details for the panel
+                    illumination = illum_data if illum_data else 1.0
+                    draw_circle(stdscr, screen_y, screen_x, preview_radius, scale, illumination)
+                # panel details 
                 distance_au = observation.distance().au
-                mag_val = None # figure a way out to do this
+                mag_val = None # figure a way out to do this??
                 ra, dec, _ = astrometric.radec()
-                body_data = { 'name': name, 'dist': distance_au,
-                             'mag': mag_val, 'ra': ra, 'dec': dec }
+                illumination = illum_data if illum_data else 1.0
+                body_data = { 'name': name, 'dist': distance_au, 'mag': mag_val, 
+                             'ra': ra, 'dec': dec, 'illumination': illumination }
             elif 0 <= screen_x < w and 0 <= screen_y < h:
                 if fov <= 1.0: # show 3 letters
                     sy = min(h-2, int(screen_y))
@@ -154,6 +167,7 @@ def main(stdscr):
             panel_lines = [
                 f"--- {body_data["name"]} ---",
                 f" Distance: {body_data["dist"]:.2f} AU",
+                f" Illumination: {body_data["illumination"]*100:.1f}%",
                 f" RA: {body_data["ra"].hours:6.2f}h",
                 f" Mag: {body_data["mag"]:.2f}" if body_data["mag"] is not None else " Mag: N/A",
                 f" Dec: {body_data["dec"].degrees:6.2f}\u00b0" # degree symbol
