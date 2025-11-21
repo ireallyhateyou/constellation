@@ -2,3 +2,4 @@ windows-curses
 skyfield
 pandas
 matplotlib
+numpy

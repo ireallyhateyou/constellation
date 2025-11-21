@@ -5,9 +5,11 @@ cosmodroma
 import curses
 import math
 import time
+from skyfield import almanac
 from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
+import numpy as np
 
 def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
     center_y = int(y)
@@ -23,13 +25,25 @@ def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
             if center_y + dy < 0 or center_y + dy >= h or center_x + dx < 0 or center_x + dx >= w:
                 continue # dont draw outside bounds
             # shading
-            lit_threshold = (illumination * 2 - 1) * (radius * 2) 
-            if dx < lit_threshold:
-                # enlightened part
-                shade_char = charmap[len(charmap) - 1 - char_index]
+            phase = illumination * math.pi
+            lx = math.cos(phase)
+            ly = math.sin(phase)
+            # normal vector at this pixel (sphere)
+            if normalized_dist <= 1.0:
+                nx = (dx/2) / radius
+                ny = dy / radius
+                # Lambert shading - https://lavalle.pl/vr/node197.html
+                brightness = nx*lx + ny*ly
+                if brightness > 0:
+                    # map brightness to charmap
+                    idx = int(brightness * (len(charmap)-1))
+                    idx = max(0, min(len(charmap)-1, idx))
+                    shade_char = charmap[idx]
+                else:
+                    # dark hemisphere
+                    shade_char = charmap[0]
             else:
-                # shadowed part
-                shade_char = charmap[0]
+                continue
             stdscr.addch(center_y + dy, center_x + dx, shade_char)
 
 def main(stdscr):
@@ -139,17 +153,18 @@ def main(stdscr):
             illum_data = None
             if name == focused_body and fov <= deepzoom_fov:
                 sun = planets['sun']
-                illum_data = body.at(t).observe(sun).fraction_illuminated(earth)
+                illum_data = almanac.fraction_illuminated(planets, name, t) # True and Real Illumination
             if name == focused_body and fov <= deepzoom_fov:
                 # draw our circle with illumination
                 if 0 <= screen_x < w and 0 <= screen_y < h:
-                    illumination = illum_data if illum_data else 1.0
-                    draw_circle(stdscr, screen_y, screen_x, preview_radius, scale, illumination)
-                # panel details 
+                    illumination = float(illum_data) if illum_data is not None else 1.0
+                    safe_radius = min(int(3 / fov), 20)
+                    draw_circle(stdscr, screen_y, screen_x, preview_radius, scale, illum_data)
+                # panel details
                 distance_au = observation.distance().au
                 mag_val = None # figure a way out to do this??
                 ra, dec, _ = astrometric.radec()
-                illumination = illum_data if illum_data else 1.0
+                illumination = float(illum_data) if illum_data is not None else 1.0
                 body_data = { 'name': name, 'dist': distance_au, 'mag': mag_val, 
                              'ra': ra, 'dec': dec, 'illumination': illumination }
             elif 0 <= screen_x < w and 0 <= screen_y < h:
