@@ -97,6 +97,10 @@ def main(stdscr):
             x_stars, y_stars = projection(astrometric)
             mags = bright_stars["magnitude"].values
             for i in range(len(x_stars)):
+                x_dist_au = x_stars[i]
+                y_dist_au = y_stars[i]
+                if x_dist_au**2 + y_dist_au**2 > (fov/2 * 2)**2: # prevent co-ords from blowing up
+                    continue
                 screen_x = (x_stars[i] / (fov/2) + 1) * (w / 2)
                 screen_y = (-y_stars[i] / (fov/2) + 1) * (h / 2)
                 if 0 <= screen_x < w and 0 <= screen_y < h:
