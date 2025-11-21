@@ -33,7 +33,7 @@ def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
                 nx = (dx/2) / radius
                 ny = dy / radius
                 # Lambert shading - https://lavalle.pl/vr/node197.html
-                brightness = nx*lx + ny*ly
+                brightness = max(0, nx*lx + ny*ly) ** 0.5
                 if brightness > 0:
                     # map brightness to charmap
                     idx = int(brightness * (len(charmap)-1))
@@ -107,9 +107,6 @@ def main(stdscr):
         stdscr.clear()
         h, w = stdscr.getmaxyx()
         t = ts.now() # real time!!!!
-        center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
-        projection = build_stereographic_projection(center_position)
-
         if fov <= deepzoom_fov and focused_body in bodies:
             ## update camera on our focused body if fov is locked in
             center_obj = observer.at(t).observe(bodies[focused_body])
