@@ -85,7 +85,7 @@ def main(stdscr):
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()
-        t = ts.now()
+        t = ts.now() # real time!!!!
         center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
         projection = build_stereographic_projection(center_position)
 
@@ -110,12 +110,16 @@ def main(stdscr):
                     continue
                 screen_x = (x_stars[i] / (fov/2) + 1) * (w / 2)
                 screen_y = (-y_stars[i] / (fov/2) + 1) * (h / 2)
-                if 0 <= screen_x < w and 0 <= screen_y < h:
+                if not math.isfinite(screen_x) or not math.isfinite(screen_y): # bro :sob:
+                    continue
+                if 0 <= screen_x < w and 0 <= screen_y < h: # force it to fit the aspect ratio
                     mag_value = mags[i] # a larger index for larger magnitude (dimmer stars)
                     mag_index = int(max(0, (3.5 - mag_value) * 9 / 3.5)) # scale from 0 to 9
                     mag_index = min(mag_index, len(scale)-1)
-                    if abs(screen_x) < w * 2 and abs(screen_y) < h * 2: # force it to fit the aspect ratio
-                        stdscr.addch(int(screen_y), int(screen_x), scale[mag_index])
+                    safe_y = max(0, min(h - 1, int(screen_y)))
+                    safe_x = max(0, min(w - 1, int(screen_x)))
+                    if safe_x < w-1 and safe_y < h-1:
+                        stdscr.addch(safe_y, safe_x, scale[mag_index])
 
         ## draw celestial bodies
         body_data = {}
@@ -137,9 +141,13 @@ def main(stdscr):
                              'mag': mag_val, 'ra': ra, 'dec': dec }
             elif 0 <= screen_x < w and 0 <= screen_y < h:
                 if fov <= 1.0: # show 3 letters
-                    stdscr.addstr(int(screen_y), int(screen_x), name[0:3], curses.A_BOLD)
+                    sy = min(h-2, int(screen_y))
+                    sx = min(w-4, int(screen_x))  # printing 3 chars -> avoid last 3 columns
+                    stdscr.addstr(sy, sx, name[0:3], curses.A_BOLD)
                 else: # show 1 letter
-                    stdscr.addch(int(screen_y), int(screen_x), name[0], curses.A_BOLD)
+                    sy = min(h-2, int(screen_y))
+                    sx = min(w-2, int(screen_x))
+                    stdscr.addch(sy, sx, name[0], curses.A_BOLD)
 
         ## draw focus panel when you zoom in
         if fov <= deepzoom_fov and body_data:  
@@ -173,8 +181,8 @@ def main(stdscr):
             zoom_step = 0.001 if fov <= 0.1 else 1.0 
             fov = max(0.001, fov - zoom_step)
         elif key == ord("s"): 
-            zoom_step = 0.001 if fov < 1.0 else 1.0 
-            fov = fov + zoom_step
+            zoom_step = 0.001 if fov < deepzoom_fov * 10 else 1.0 
+            fov = min(90.0, fov + zoom_step)
         azimuth = azimuth % 360
 
 if __name__ == "__main__":
