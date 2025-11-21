@@ -47,6 +47,13 @@ def main(stdscr):
     stdscr.nodelay(1)
     stdscr.timeout(50)
     sh, sw = stdscr.getmaxyx() # fetch terminal size
+    # colours
+    if curses.has_colors():
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(4, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
     h = sh 
     w = sw 
     stdscr.addstr(h//2, w//2 - 26, "downloading planet data...")
@@ -124,10 +131,7 @@ def main(stdscr):
                     draw_circle(stdscr, screen_y, screen_x, preview_radius, scale)
                 # Calculate details for the panel
                 distance_au = observation.distance().au
-                try:
-                    mag_val = observation.magnitude # holy fuck 
-                except:
-                    mag_val = None
+                mag_val = None # figure a way out to do this
                 ra, dec, _ = astrometric.radec()
                 body_data = { 'name': name, 'dist': distance_au,
                              'mag': mag_val, 'ra': ra, 'dec': dec }
