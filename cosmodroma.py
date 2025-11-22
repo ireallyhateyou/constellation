@@ -27,8 +27,14 @@ def main(stdscr):
     scale = " .:!+*$#@"
     preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
-    auto_rotate = True
     focused_body = "Sun" # body we focus on
+    pan_active = False
+    pan_start_az = azimuth
+    pan_start_alt = alt
+    pan_target_az = azimuth
+    pan_target_alt = alt
+    pan_start_time = 0.0
+    pan_duration = 0.35  # seconds to complete pan
 
     # colours
     if curses.has_colors():
@@ -46,6 +52,7 @@ def main(stdscr):
     # terminal stuff
     curses.curs_set(0)
     stdscr.nodelay(1)
+    stdscr.keypad(True)
     stdscr.timeout(30)
     sh, sw = stdscr.getmaxyx() # fetch terminal size
     h = sh 
@@ -58,6 +65,17 @@ def main(stdscr):
 
     # focus on the sun by default
     t_init = ts.now()
+    if pan_active: # I forgot what this does
+        elapsed = time.time() - pan_start_time
+        frac = min(1.0, max(0.0, elapsed / pan_duration))
+        d_az = normalize_angle(pan_target_az - pan_start_az)
+        azimuth = (pan_start_az + d_az * frac) % 360
+        alt = pan_start_alt + (pan_target_alt - pan_start_alt) * frac
+        alt = max(-90.0, min(90.0, alt))
+        if frac >= 1.0:
+            pan_active = False
+            pass
+
     sun_init_obs = observer.at(t_init).observe(bodies["Sun"])
     sun_az, sun_alt, _ = sun_init_obs.apparent().altaz()
     azimuth = sun_az.degrees
@@ -68,30 +86,7 @@ def main(stdscr):
         stdscr.clear()
         h, w = stdscr.getmaxyx()
         t = ts.now()
-
-        # auto rotate
-        is_locked = (fov <= deepzoom_fov and focused_body in bodies)
-        if auto_rotate and not is_locked:
-            azimuth = (azimuth + 0.1) % 360
-        
-        # auto guiding
-        if not is_locked:
-            min_dist = float('inf')
-            closest_name = None
-            for name, body in bodies.items():
-                for name, body in bodies.items():
-                    obs = observer.at(t).observe(body)
-                    b_az, b_alt, _ = obs.apparent().altaz()
-                    d_az = abs(b_az.degrees - azimuth)
-                    if d_az > 180: d_az = 360 - d_az
-                    d_alt = abs(b_alt.degrees - alt)
-                    dist = math.sqrt(d_az**2 + d_alt**2)
-                    if dist < min_dist:
-                        min_dist = dist
-                        closest_name = name
-            if closest_name:
-                focused_body = closest_name
-
+        is_locked = (fov <= deepzoom_fov and focused_body in bodies) # if locked in...
         ## update camera on our focused body if fov is locked in
         if is_locked:
             target_body = observer.at(t).observe(bodies[focused_body])
@@ -177,31 +172,36 @@ def main(stdscr):
                     except: pass
 
         ### controls
-        mode = " [LOCKED]" if is_locked else (" [AUTO]" if auto_rotate else "")
-        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f}{mode} | 'r' rotate, 'w/s' zoom, 'q' quit"
+        target_str = f" Target:{focused_body}" if not is_locked else ""
+        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f}{target_str} | 'r' rotate, 'w/s' zoom, 'e' target, 'q' quit"
         try: stdscr.addstr(0, 0, status[:w-1], curses.A_REVERSE)
         except: pass
 
         ## input
         key = stdscr.getch()
         if key == ord('q'): break
-        if key == ord('r'): auto_rotate = not auto_rotate
-        if key == curses.KEY_LEFT: 
-            auto_rotate = False
-            azimuth -= 2
-        if key == curses.KEY_RIGHT: 
-            auto_rotate = False
-            azimuth += 2
-        if key == curses.KEY_UP: 
-            auto_rotate = False
-            alt = min(90, alt + 2)
-        if key == curses.KEY_DOWN: 
-            auto_rotate = False
-            alt = max(-90, alt - 2)
+        if key == ord('e'):
+            stdscr.nodelay(0)
+            curses.echo()
+            prompt = "Enter target name (e.g., Moon, Mars, Sun) and press ENTER: "
+            stdscr.addstr(h-2, 0, prompt, curses.A_REVERSE)
+            try:
+                input_bytes = stdscr.getstr(h-2, len(prompt), 30) # get input
+                target_name = input_bytes.decode('utf-8').strip().title()
+            except:
+                target_name = ""
+            if target_name in bodies:
+                focused_body = target_name
+            curses.noecho()
+            stdscr.addstr(h-2, 0, ' ' * w)
+            stdscr.nodelay(1)
+        if key == curses.KEY_LEFT: azimuth -= 2
+        if key == curses.KEY_RIGHT: azimuth += 2
+        if key == curses.KEY_UP: alt = min(90, alt + 2)
+        if key == curses.KEY_DOWN: alt = max(-90, alt - 2)
         if key == ord('w'): fov = max(0.001, fov * 0.9)
         if key == ord('s'): fov = min(120, fov * 1.1)
         azimuth %= 360 # make azimuth roll back
-        time.sleep(0.05) # 20 FPS
 
 if __name__ == "__main__":
     curses.wrapper(main)

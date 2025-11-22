@@ -1,6 +1,5 @@
 from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
-import curses
 
 # configuration for spaceslop
 lat = 40.7128 # this is NYC btw
@@ -25,6 +24,5 @@ def load_data(stdscr, h, w):
     with load.open(hipparcos.URL) as f:
         df = hipparcos.load_dataframe(f)
     bright_stars = df[df["magnitude"] <= 3.5]
-    stars = Star.from_dataframe(bright_stars) 
-
+    stars = Star.from_dataframe(bright_stars)
     return ts, planets, observer, bodies, stars

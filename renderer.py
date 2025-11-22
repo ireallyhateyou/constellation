@@ -9,18 +9,19 @@ def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
         except:
             pass
 
-def tart_menu(stdscr):
+def start_menu(stdscr):
     curses.curs_set(0)
     stdscr.nodelay(0) # block until input
     current_option = 0
     options = ["Start Simulation", "About", "Quit"]
-    
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()
-        # title
+        # titles
         title = "C O S M O D R O M A"
         stdscr.addstr(h//2 - 4, w//2 - len(title)//2, title, curses.A_BOLD | curses.color_pair(2))
+        subtitle = "your telescope to the stars"
+        stdscr.addstr(h//2 - 3, w//2 - len(subtitle)//2, subtitle, curses.A_BOLD | curses.color_pair(2))
         # options
         for i, option in enumerate(options):
             x_pos = w//2 - len(option)//2
