@@ -26,4 +26,5 @@ def load_data(stdscr, h, w):
         df = hipparcos.load_dataframe(f)
     bright_stars = df[df["magnitude"] <= 3.5]
     stars = Star.from_dataframe(bright_stars) 
+
     return ts, planets, observer, bodies, stars

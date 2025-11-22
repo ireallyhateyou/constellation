@@ -9,7 +9,7 @@ def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
         except:
             pass
 
-def start_menu(stdscr):
+def tart_menu(stdscr):
     curses.curs_set(0)
     stdscr.nodelay(0) # block until input
     current_option = 0

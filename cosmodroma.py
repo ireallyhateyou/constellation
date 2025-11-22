@@ -1,7 +1,7 @@
 """
 cosmodroma
 """
-
+import math
 import curses
 import time
 import numpy as np
@@ -28,13 +28,16 @@ def main(stdscr):
     preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
     auto_rotate = True
-    focused_body = "Moon" # body we focus on
+    focused_body = "Sun" # body we focus on
 
     # colours
     if curses.has_colors():
         curses.start_color()
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
     # run start menu
     if not start_menu(stdscr):
@@ -70,6 +73,24 @@ def main(stdscr):
         is_locked = (fov <= deepzoom_fov and focused_body in bodies)
         if auto_rotate and not is_locked:
             azimuth = (azimuth + 0.1) % 360
+        
+        # auto guiding
+        if not is_locked:
+            min_dist = float('inf')
+            closest_name = None
+            for name, body in bodies.items():
+                for name, body in bodies.items():
+                    obs = observer.at(t).observe(body)
+                    b_az, b_alt, _ = obs.apparent().altaz()
+                    d_az = abs(b_az.degrees - azimuth)
+                    if d_az > 180: d_az = 360 - d_az
+                    d_alt = abs(b_alt.degrees - alt)
+                    dist = math.sqrt(d_az**2 + d_alt**2)
+                    if dist < min_dist:
+                        min_dist = dist
+                        closest_name = name
+            if closest_name:
+                focused_body = closest_name
 
         ## update camera on our focused body if fov is locked in
         if is_locked:
@@ -109,6 +130,13 @@ def main(stdscr):
             # coords relative to the screen
             sx = (x_body / (fov/2) + 1) * (w / 2)
             sy = (-y_body / (fov/2) + 1) * (h / 2)
+            # colors per planet
+            color_attr = curses.color_pair(1)
+            if name == "Mars": color_attr = curses.color_pair(3)
+            elif name == "Sun": color_attr = curses.color_pair(4) | curses.A_BOLD 
+            elif name == "Jupiter": color_attr = curses.color_pair(4) 
+            elif name == "Venus": color_attr = curses.color_pair(5) 
+            elif name == "Moon": color_attr = curses.color_pair(1)
             illum_val = 1.0
             if name == "Moon":
                 # moon phase
@@ -129,7 +157,7 @@ def main(stdscr):
                             is_occupied = True
                 if not is_occupied:
                     label = name[:3] if fov < 5.0 else name[0]
-                    s_addch(stdscr, sy, sx, label[0], curses.A_BOLD | curses.color_pair(1))
+                    s_addch(stdscr, sy, sx, label[0], curses.A_BOLD | color_attr)
                     # mark pixel as occupied
                     drawn_labels.setdefault(int(sy), set()).add(int(sx))
 
