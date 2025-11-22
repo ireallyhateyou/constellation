@@ -56,6 +56,7 @@ def main(stdscr):
     scale = " .,:;+*#@"
     preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
+    auto_rotate = True
 
     # configuration for spaceslop
     lat = 40.7128 # this is NYC btw
@@ -107,6 +108,8 @@ def main(stdscr):
         stdscr.clear()
         h, w = stdscr.getmaxyx()
         t = ts.now() # real time!!!!
+        if auto_rotate:
+            azimuth = (azimuth + 0.1) % 360
         if fov <= deepzoom_fov and focused_body in bodies:
             ## update camera on our focused body if fov is locked in
             center_obj = observer.at(t).observe(bodies[focused_body])
@@ -156,7 +159,7 @@ def main(stdscr):
                 if 0 <= screen_x < w and 0 <= screen_y < h:
                     illumination = float(illum_data) if illum_data is not None else 1.0
                     safe_radius = min(int(3 / fov), 20)
-                    draw_circle(stdscr, screen_y, screen_x, preview_radius, scale, illum_data)
+                    draw_circle(stdscr, screen_y, screen_x, preview_radius, scale, 1)
                 # panel details
                 distance_au = observation.distance().au
                 mag_val = None # figure a way out to do this??
@@ -209,6 +212,7 @@ def main(stdscr):
         elif key == ord("s"): 
             zoom_step = 0.001 if fov < deepzoom_fov * 10 else 1.0 
             fov = min(90.0, fov + zoom_step)
+        elif key == ord("r"): auto_rotate = not auto_rotate
         azimuth = azimuth % 360
 
 if __name__ == "__main__":
