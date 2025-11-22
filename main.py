@@ -11,40 +11,61 @@ from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
 import numpy as np
 
+def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
+    h, w = stdscr.getmaxyx()
+    if 0 <= y < h and 0 <= x < w: # only if it is within bounds.
+        try:
+            stdscr.addch(int(y), int(x), char, attr)
+        except:
+            pass
+
+def normalize_angle(degrees):
+    # force angles into [-180, 180]
+    return (degrees + 180) % 360 - 180
+
 def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
     center_y = int(y)
     center_x = int(x)
-    h, w = stdscr.getmaxyx()
+    
+    # light direction based on phase
+    angle = (1.0 - illumination) * math.pi 
+    lx = math.sin(angle)
+    lz = math.cos(angle)
+
+    # white (bold)
+    attr = curses.color_pair(1) | curses.A_BOLD
+
     for dy in range(-radius, radius + 1):
-        for dx in range(-radius * 2, radius * 2 + 1): # x2 for terminal aspect ratio
-            distance = math.sqrt(dy*dy + (dx/2)*(dx/2)) # dx/2 for ratio correction
-            normalized_dist = distance / radius
-            # shade indices
-            char_index = int(normalized_dist * (len(charmap) - 1))
-            char_index = min(char_index, len(charmap) - 1)
-            if center_y + dy < 0 or center_y + dy >= h or center_x + dx < 0 or center_x + dx >= w:
-                continue # dont draw outside bounds
-            # shading
-            phase = illumination * math.pi
-            lx = math.cos(phase)
-            ly = math.sin(phase)
-            # normal vector at this pixel (sphere)
-            if normalized_dist <= 1.0:
-                nx = (dx/2) / radius
-                ny = dy / radius
-                # Lambert shading - https://lavalle.pl/vr/node197.html
-                brightness = max(0, nx*lx + ny*ly) ** 0.5
-                if brightness > 0:
-                    # map brightness to charmap
-                    idx = int(brightness * (len(charmap)-1))
-                    idx = max(0, min(len(charmap)-1, idx))
-                    shade_char = charmap[idx]
-                else:
-                    # dark hemisphere
-                    shade_char = charmap[0]
+        for dx in range(-radius * 2, radius * 2 + 1):
+            # correct aspect ratio
+            dist_sq = (dy * dy) + (dx / 2.0) ** 2
+            dist = math.sqrt(dist_sq)
+            if dist > radius: continue 
+
+            # 3d sphere
+            px = (dx / 2.0) / radius
+            py = dy / radius
+            pz_sq = 1.0 - px*px - py*py
+            
+            if pz_sq < 0: continue
+            pz = math.sqrt(pz_sq)
+
+            # lambert shading - https://lavalle.pl/vr/node197.html
+            dot = px * lx + pz * lz
+            brightness = max(0, dot)
+            
+            if brightness > 0.05:
+                # lit side
+                idx = int(brightness * (len(charmap) - 1))
+                char = charmap[idx]
+                s_addch(stdscr, center_y + dy, center_x + dx, char, attr)
             else:
-                continue
-            stdscr.addch(center_y + dy, center_x + dx, shade_char)
+                # dark hemisphere
+                # make a grid pattern
+                is_grid = (center_x + dx) % 2 == 0 and (center_y + dy) % 2 == 0
+                char = '.' if is_grid else ' ' 
+                if dist > radius - 1: char = ':' 
+                s_addch(stdscr, center_y + dy, center_x + dx, char, curses.color_pair(2) | curses.A_BOLD)
 
 def main(stdscr):
     # configuration for ASCII art and camera
@@ -53,10 +74,10 @@ def main(stdscr):
     azimuth = 180.0 # all in degrees
     alt = 30.0 
     fov = 10.0 
-    scale = " .,:;+*#@"
+    scale = ".,:;+*#@"
     preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
-    auto_rotate = True
+    auto_rotate = False
 
     # configuration for spaceslop
     lat = 40.7128 # this is NYC btw
@@ -66,154 +87,137 @@ def main(stdscr):
     # terminal stuff
     curses.curs_set(0)
     stdscr.nodelay(1)
-    stdscr.timeout(50)
+    stdscr.timeout(30)
+
+    # colours
+    if curses.has_colors():
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_BLACK)
+
     sh, sw = stdscr.getmaxyx() # fetch terminal size
     h = sh 
     w = sw 
     stdscr.addstr(h//2, w//2 - 26, "downloading planet data...")
     stdscr.refresh()
 
-    # colours
-    if curses.has_colors():
-        curses.start_color()
-        curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-        curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
-        curses.init_pair(4, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-
-    ## jpl ephemeris - https://ssd.jpl.nasa.gov/ephem.html
+    ### load data
+    ## jpl ephemeris
     ts = load.timescale()
     planets = load("de421.bsp")
     earth = planets["earth"]
     observer = earth + wgs84.latlon(lat, long)
-    bodies = { # celestial bodies that we will track
-        "Mars": planets["mars"],
-        "Venus": planets["venus"],
-        "Jup": planets["jupiter barycenter"],
-        "Sat": planets["saturn barycenter"],
-        "Moon": planets["moon"]
-    }
+    bodies = { "Mars": planets["mars"], "Venus": planets["venus"], 
+               "Jupiter": planets["jupiter barycenter"], "Moon": planets["moon"] }
 
-    ## star data from hipparicos - https://www.cosmos.esa.int/web/hipparcos/
+    ## star data
     stdscr.clear()
     stdscr.addstr(h//2, w//2 - 24, "downloading star data...")
     stdscr.refresh()
     with load.open(hipparcos.URL) as f:
         df = hipparcos.load_dataframe(f)
     bright_stars = df[df["magnitude"] <= 3.5]
-    stars = Star.from_dataframe(bright_stars) # cast into skyfield object
+    stars = Star.from_dataframe(bright_stars) 
 
     ### main drawing loop
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()
-        t = ts.now() # real time!!!!
-        if auto_rotate:
-            azimuth = (azimuth + 0.1) % 360
-        if fov <= deepzoom_fov and focused_body in bodies:
-            ## update camera on our focused body if fov is locked in
-            center_obj = observer.at(t).observe(bodies[focused_body])
-            center_az, center_alt, _ = center_obj.apparent().altaz()            
+        t = ts.now()
+
+        # auto rotate
+        is_locked = (fov <= deepzoom_fov and focused_body in bodies)
+        if auto_rotate and not is_locked:
+            azimuth = (azimuth + 0.1) % 360 
+
+        ## update camera on our focused body if fov is locked in
+        if is_locked:
+            target_body = observer.at(t).observe(bodies[focused_body])
+            center_position = target_body.apparent()
+            # update ui stuff
+            center_az, center_alt, _ = center_position.altaz()            
             azimuth = center_az.degrees
             alt = center_alt.degrees
-        center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
+        else:
+            # just move it yourself
+            center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
+
+        # build the camera view from that center
         projection = build_stereographic_projection(center_position)
 
-        ## draw stars... only when we aren"t zooming
+        ## draw stars
         if fov > deepzoom_fov * 2:
             astrometric = observer.at(t).observe(stars)
             x_stars, y_stars = projection(astrometric)
-            mags = bright_stars["magnitude"].values
+            limit = (fov/2 * 2)**2
             for i in range(len(x_stars)):
-                x_dist_au = x_stars[i]
-                y_dist_au = y_stars[i]
-                if x_dist_au**2 + y_dist_au**2 > (fov/2 * 2)**2: # prevent co-ords from blowing up
-                    continue
-                screen_x = (x_stars[i] / (fov/2) + 1) * (w / 2)
-                screen_y = (-y_stars[i] / (fov/2) + 1) * (h / 2)
-                if not math.isfinite(screen_x) or not math.isfinite(screen_y): # bro :sob:
-                    continue
-                if 0 <= screen_x < w and 0 <= screen_y < h: # force it to fit the aspect ratio
-                    mag_value = mags[i] # a larger index for larger magnitude (dimmer stars)
-                    mag_index = int(max(0, (3.5 - mag_value) * 9 / 3.5)) # scale from 0 to 9
-                    mag_index = min(mag_index, len(scale)-1)
-                    safe_y = max(0, min(h - 1, int(screen_y)))
-                    safe_x = max(0, min(w - 1, int(screen_x)))
-                    if safe_x < w-1 and safe_y < h-1:
-                        stdscr.addch(safe_y, safe_x, scale[mag_index])
+                if x_stars[i]**2 + y_stars[i]**2 > limit: continue
+                sx = (x_stars[i] / (fov/2) + 1) * (w / 2)
+                sy = (-y_stars[i] / (fov/2) + 1) * (h / 2)
+                s_addch(stdscr, sy, sx, '.', curses.color_pair(2))
 
         ## draw celestial bodies
         body_data = {}
+        
         for name, body in bodies.items():
             observation = observer.at(t).observe(body)
             astrometric = observation.apparent()
             x_body, y_body = projection(astrometric)
-            screen_x = (x_body / (fov/2) + 1) * (w / 2)
-            screen_y = (-y_body / (fov/2) + 1) * (h / 2)
-            illum_data = None
+            
+            # coords relative to the screen
+            sx = (x_body / (fov/2) + 1) * (w / 2)
+            sy = (-y_body / (fov/2) + 1) * (h / 2)
+            
+            illum_val = 1.0
+            if name == "Moon":
+                # TODO: this actually doesn't give proper data, figure this out.
+                illum_val = almanac.fraction_illuminated(planets, 'moon', t)
+
             if name == focused_body and fov <= deepzoom_fov:
-                sun = planets['sun']
-                illum_data = almanac.fraction_illuminated(planets, name, t) # True and Real Illumination
-            if name == focused_body and fov <= deepzoom_fov:
-                # draw our circle with illumination
-                if 0 <= screen_x < w and 0 <= screen_y < h:
-                    illumination = float(illum_data) if illum_data is not None else 1.0
-                    safe_radius = min(int(3 / fov), 20)
-                    draw_circle(stdscr, screen_y, screen_x, preview_radius, scale, 1)
-                # panel details
-                distance_au = observation.distance().au
-                mag_val = None # figure a way out to do this??
+                draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val))
+                dist = observation.distance().au
                 ra, dec, _ = astrometric.radec()
-                illumination = float(illum_data) if illum_data is not None else 1.0
-                body_data = { 'name': name, 'dist': distance_au, 'mag': mag_val, 
-                             'ra': ra, 'dec': dec, 'illumination': illumination }
-            elif 0 <= screen_x < w and 0 <= screen_y < h:
-                if fov <= 1.0: # show 3 letters
-                    sy = min(h-2, int(screen_y))
-                    sx = min(w-4, int(screen_x))  # printing 3 chars -> avoid last 3 columns
-                    stdscr.addstr(sy, sx, name[0:3], curses.A_BOLD)
-                else: # show 1 letter
-                    sy = min(h-2, int(screen_y))
-                    sx = min(w-2, int(screen_x))
-                    stdscr.addch(sy, sx, name[0], curses.A_BOLD)
+                body_data = { 'name': name, 'dist': dist, 'illum': illum_val, 'ra': ra, 'dec': dec, 'sx': sx }
+            else:
+                # draw label
+                label = name[:3] if fov < 5.0 else name[0]
+                s_addch(stdscr, sy, sx, label[0], curses.A_BOLD | curses.color_pair(1))
 
-        ## draw focus panel when you zoom in
-        if fov <= deepzoom_fov and body_data:  
-            panel_lines = [
-                f"--- {body_data["name"]} ---",
-                f" Distance: {body_data["dist"]:.2f} AU",
-                f" Illumination: {body_data["illumination"]*100:.1f}%",
-                f" RA: {body_data["ra"].hours:6.2f}h",
-                f" Mag: {body_data["mag"]:.2f}" if body_data["mag"] is not None else " Mag: N/A",
-                f" Dec: {body_data["dec"].degrees:6.2f}\u00b0" # degree symbol
+        ## draw focus panel
+        if body_data:
+            horizon_msg = " [BELOW HORIZON]" if alt < 0 else ""
+            lines = [
+                f"--- {body_data['name']}{horizon_msg} ---",
+                f"Dist: {body_data['dist']:.5f} AU",
+                f"Phase: {body_data['illum']*100:.1f}%",
+                f"Screen X: {int(body_data['sx'])} (Center is {w//2})", 
+                f"RA: {body_data['ra'].hours:.2f}h",
+                f"Dec: {body_data['dec'].degrees:.2f}"
             ]
-
-            # print it, make sure it fits
-            start_col = w - 30 
-            start_row = 1
-            for i, line in enumerate(panel_lines):
-                if start_col >= 0 and start_row + i < h:
-                    stdscr.addstr(start_row + i, start_col, line)
+            for i, line in enumerate(lines):
+                if 2+i < h:
+                    try: stdscr.addstr(i+2, w - 35, line, curses.color_pair(1))
+                    except: pass
 
         ### controls
-        fov_display = f"{fov:.3f}" if fov < 0.1 else f"{fov:.1f}"
-        stdscr.addstr(0, 0, f"Az: {azimuth:.0f} Alt: {alt:.0f} Zoom: {fov_display} | arrows, w/s for zoom, q to quit")
-        key = stdscr.getch()
+        norm_alt = normalize_angle(alt)
+        norm_az = normalize_angle(azimuth)
+        mode = " [LOCKED]" if is_locked else (" [AUTO]" if auto_rotate else "")
+        status = f"Az:{norm_az:.1f} Alt:{norm_alt:.1f} Zoom:{fov:.3f}{mode} | 'r' rotate, 'w/s' zoom, 'q' quit"
+        try: stdscr.addstr(0, 0, status[:w-1], curses.A_REVERSE)
+        except: pass
 
         ## input
-        if key == ord("q"): break
-        elif key == curses.KEY_LEFT: azimuth = (azimuth - 5)
-        elif key == curses.KEY_RIGHT: azimuth = (azimuth + 5)
-        elif key == curses.KEY_UP: alt = min(90, alt + 5)
-        elif key == curses.KEY_DOWN: alt = max(-90, alt - 5)
-        elif key == ord("w"): 
-            zoom_step = 0.001 if fov <= 0.1 else 1.0 
-            fov = max(0.001, fov - zoom_step)
-        elif key == ord("s"): 
-            zoom_step = 0.001 if fov < deepzoom_fov * 10 else 1.0 
-            fov = min(90.0, fov + zoom_step)
-        elif key == ord("r"): auto_rotate = not auto_rotate
-        azimuth = azimuth % 360
+        key = stdscr.getch()
+        if key == ord('q'): break
+        if key == ord('r'): auto_rotate = not auto_rotate
+        if key == curses.KEY_LEFT: azimuth -= 2
+        if key == curses.KEY_RIGHT: azimuth += 2
+        if key == curses.KEY_UP: alt = min(90, alt + 2)
+        if key == curses.KEY_DOWN: alt = max(-90, alt - 2)
+        if key == ord('w'): fov = max(0.001, fov * 0.9)
+        if key == ord('s'): fov = min(120, fov * 1.1)
+        azimuth %= 360 # make azimuth roll back
 
 if __name__ == "__main__":
     curses.wrapper(main)
