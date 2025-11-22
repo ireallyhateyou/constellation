@@ -3,7 +3,6 @@ cosmodroma
 """
 
 import curses
-import math
 import time
 import numpy as np
 from skyfield import almanac
@@ -11,105 +10,13 @@ from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
 
-def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
-    h, w = stdscr.getmaxyx()
-    if 0 <= y < h and 0 <= x < w: # only if it is within bounds.
-        try:
-            stdscr.addch(int(y), int(x), char, attr)
-        except:
-            pass
+# internal modules
+from renderer import s_addch, start_menu, draw_circle
+from data_loader import load_data
 
 def normalize_angle(degrees):
     # force angles into [-180, 180]
     return (degrees + 180) % 360 - 180
-
-def start_menu(stdscr):
-    curses.curs_set(0)
-    stdscr.nodelay(0) # block until input
-    current_option = 0
-    options = ["Start Simulation", "About", "Quit"]
-    
-    while True:
-        stdscr.clear()
-        h, w = stdscr.getmaxyx()
-        # title
-        title = "C O S M O D R O M A"
-        stdscr.addstr(h//2 - 4, w//2 - len(title)//2, title, curses.A_BOLD | curses.color_pair(2))
-        # options
-        for i, option in enumerate(options):
-            x_pos = w//2 - len(option)//2
-            y_pos = h//2 - 1 + i
-            if i == current_option:
-                stdscr.attron(curses.A_REVERSE)
-                stdscr.addstr(y_pos, x_pos, option)
-                stdscr.attroff(curses.A_REVERSE)
-            else:
-                stdscr.addstr(y_pos, x_pos, option)
-        
-        # instructions
-        hint = "Use UP/DOWN to select, ENTER to confirm"
-        stdscr.addstr(h - 2, w//2 - len(hint)//2, hint, curses.color_pair(1))
-        key = stdscr.getch()
-        
-        # inputs
-        if key == curses.KEY_UP:
-            current_option = (current_option - 1) % len(options)
-        elif key == curses.KEY_DOWN:
-            current_option = (current_option + 1) % len(options)
-        elif key == 10: # enter key
-            if current_option == 0: return True #  enter
-            if current_option == 1: 
-                # about
-                stdscr.clear()
-                msg = "this is your very own telescope"
-                stdscr.addstr(h//2, w//2 - len(msg)//2, msg)
-                stdscr.refresh()
-                stdscr.getch()
-            if current_option == 2: return False # quit
-
-def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
-    center_y = int(y + 0.5)
-    center_x = int(x + 0.5)
-
-    # light direction based on phase
-    angle = (1.0 - illumination) * math.pi 
-    lx = math.sin(angle)
-    lz = math.cos(angle)
-
-    # white (bold)
-    attr = curses.color_pair(1) | curses.A_BOLD
-
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius * 2, radius * 2 + 1):
-            # correct aspect ratio
-            dist_sq = (dy * dy) + (dx / 2.0) ** 2
-            dist = math.sqrt(dist_sq)
-            if dist > radius: continue 
-
-            # 3d sphere
-            px = (dx / 2.0) / radius
-            py = dy / radius
-            pz_sq = 1.0 - px*px - py*py
-            
-            if pz_sq < 0: continue
-            pz = math.sqrt(pz_sq)
-
-            # lambert shading - https://lavalle.pl/vr/node197.html
-            dot = px * lx + pz * lz
-            brightness = max(0, dot)
-            
-            if brightness > 0.05:
-                # lit side
-                idx = int(brightness * (len(charmap) - 1))
-                char = charmap[idx]
-                s_addch(stdscr, center_y + dy, center_x + dx, char, attr)
-            else:
-                # dark hemisphere
-                # make a grid pattern
-                is_grid = (center_x + dx) % 2 == 0 and (center_y + dy) % 2 == 0
-                char = '.' if is_grid else ' ' 
-                if dist > radius - 1: char = ':' 
-                s_addch(stdscr, center_y + dy, center_x + dx, char, curses.color_pair(2) | curses.A_BOLD)
 
 def main(stdscr):
     # configuration for ASCII art and camera
@@ -122,10 +29,6 @@ def main(stdscr):
     preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
     auto_rotate = True
-
-    # configuration for spaceslop
-    lat = 40.7128 # this is NYC btw
-    long = -74.0060
     focused_body = "Moon" # body we focus on
 
     # colours
@@ -148,24 +51,8 @@ def main(stdscr):
     stdscr.addstr(h//2, w//2 - 29, "downloading Ephemeris data...", curses.A_BLINK)
     stdscr.refresh()
 
-    ### load data
-    ## jpl ephemeris
-    ts = load.timescale()
-    planets = load("de421.bsp")
-    earth = planets["earth"]
-    observer = earth + wgs84.latlon(lat, long)
-    bodies = { "Mars": planets["mars"], "Venus": planets["venus"], 
-               "Jupiter": planets["jupiter barycenter"], "Moon": planets["moon"] }
-
-    ## star data
-    ## hipparcos
-    stdscr.clear()
-    stdscr.addstr(h//2, w//2 - 29, "downloading Hipparcos data...")
-    stdscr.refresh()
-    with load.open(hipparcos.URL) as f:
-        df = hipparcos.load_dataframe(f)
-    bright_stars = df[df["magnitude"] <= 3.5]
-    stars = Star.from_dataframe(bright_stars) 
+    # load data
+    ts, planets, observer, bodies, stars = load_data(stdscr, h, w)
 
     # focus on the moon by default
     t_init = ts.now()
