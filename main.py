@@ -74,10 +74,10 @@ def main(stdscr):
     azimuth = 180.0 # all in degrees
     alt = 30.0 
     fov = 10.0 
-    scale = ".,:;+*#@"
-    preview_radius = 5
+    scale = " .:!+*$#@"
+    preview_radius = 8
     deepzoom_fov = 0.01 # fov required for focus
-    auto_rotate = False
+    auto_rotate = True
 
     # configuration for spaceslop
     lat = 40.7128 # this is NYC btw
@@ -119,7 +119,13 @@ def main(stdscr):
     bright_stars = df[df["magnitude"] <= 3.5]
     stars = Star.from_dataframe(bright_stars) 
 
-    ### main drawing loop
+    # focus on the moon by default
+    t_init = ts.now()
+    moon_init_obs = observer.at(t_init).observe(bodies["Moon"])
+    moon_az, moon_alt, _ = moon_init_obs.apparent().altaz()
+    azimuth = moon_az.degrees
+    alt = moon_alt.degrees
+
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()
