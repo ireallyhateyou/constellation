@@ -275,10 +275,18 @@ def main(stdscr):
         key = stdscr.getch()
         if key == ord('q'): break
         if key == ord('r'): auto_rotate = not auto_rotate
-        if key == curses.KEY_LEFT: azimuth -= 2
-        if key == curses.KEY_RIGHT: azimuth += 2
-        if key == curses.KEY_UP: alt = min(90, alt + 2)
-        if key == curses.KEY_DOWN: alt = max(-90, alt - 2)
+        if key == curses.KEY_LEFT: 
+            auto_rotate = False
+            azimuth -= 2
+        if key == curses.KEY_RIGHT: 
+            auto_rotate = False
+            azimuth += 2
+        if key == curses.KEY_UP: 
+            auto_rotate = False
+            alt = min(90, alt + 2)
+        if key == curses.KEY_DOWN: 
+            auto_rotate = False
+            alt = max(-90, alt - 2)
         if key == ord('w'): fov = max(0.001, fov * 0.9)
         if key == ord('s'): fov = min(120, fov * 1.1)
         azimuth %= 360 # make azimuth roll back
