@@ -5,11 +5,11 @@ cosmodroma
 import curses
 import math
 import time
+import numpy as np
 from skyfield import almanac
 from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
-import numpy as np
 
 def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
     h, w = stdscr.getmaxyx()
@@ -23,10 +23,54 @@ def normalize_angle(degrees):
     # force angles into [-180, 180]
     return (degrees + 180) % 360 - 180
 
-def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
-    center_y = int(y)
-    center_x = int(x)
+def start_menu(stdscr):
+    curses.curs_set(0)
+    stdscr.nodelay(0) # block until input
+    current_option = 0
+    options = ["Start Simulation", "About", "Quit"]
     
+    while True:
+        stdscr.clear()
+        h, w = stdscr.getmaxyx()
+        # title
+        title = "C O S M O D R O M A"
+        stdscr.addstr(h//2 - 4, w//2 - len(title)//2, title, curses.A_BOLD | curses.color_pair(2))
+        # options
+        for i, option in enumerate(options):
+            x_pos = w//2 - len(option)//2
+            y_pos = h//2 - 1 + i
+            if i == current_option:
+                stdscr.attron(curses.A_REVERSE)
+                stdscr.addstr(y_pos, x_pos, option)
+                stdscr.attroff(curses.A_REVERSE)
+            else:
+                stdscr.addstr(y_pos, x_pos, option)
+        
+        # instructions
+        hint = "Use UP/DOWN to select, ENTER to confirm"
+        stdscr.addstr(h - 2, w//2 - len(hint)//2, hint, curses.color_pair(1))
+        key = stdscr.getch()
+        
+        # inputs
+        if key == curses.KEY_UP:
+            current_option = (current_option - 1) % len(options)
+        elif key == curses.KEY_DOWN:
+            current_option = (current_option + 1) % len(options)
+        elif key == 10: # enter key
+            if current_option == 0: return True #  enter
+            if current_option == 1: 
+                # about
+                stdscr.clear()
+                msg = "this is your very own telescope"
+                stdscr.addstr(h//2, w//2 - len(msg)//2, msg)
+                stdscr.refresh()
+                stdscr.getch()
+            if current_option == 2: return False # quit
+
+def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
+    center_y = int(y + 0.5)
+    center_x = int(x + 0.5)
+
     # light direction based on phase
     angle = (1.0 - illumination) * math.pi 
     lx = math.sin(angle)
@@ -75,7 +119,7 @@ def main(stdscr):
     alt = 30.0 
     fov = 10.0 
     scale = " .:!+*$#@"
-    preview_radius = 8
+    preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
     auto_rotate = True
 
@@ -84,21 +128,24 @@ def main(stdscr):
     long = -74.0060
     focused_body = "Moon" # body we focus on
 
-    # terminal stuff
-    curses.curs_set(0)
-    stdscr.nodelay(1)
-    stdscr.timeout(30)
-
     # colours
     if curses.has_colors():
         curses.start_color()
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_BLACK)
 
+    # run start menu
+    if not start_menu(stdscr):
+        return
+
+    # terminal stuff
+    curses.curs_set(0)
+    stdscr.nodelay(1)
+    stdscr.timeout(30)
     sh, sw = stdscr.getmaxyx() # fetch terminal size
     h = sh 
     w = sw 
-    stdscr.addstr(h//2, w//2 - 26, "downloading planet data...")
+    stdscr.addstr(h//2, w//2 - 29, "downloading Ephemeris data...", curses.A_BLINK)
     stdscr.refresh()
 
     ### load data
@@ -111,8 +158,9 @@ def main(stdscr):
                "Jupiter": planets["jupiter barycenter"], "Moon": planets["moon"] }
 
     ## star data
+    ## hipparcos
     stdscr.clear()
-    stdscr.addstr(h//2, w//2 - 24, "downloading star data...")
+    stdscr.addstr(h//2, w//2 - 29, "downloading Hipparcos data...")
     stdscr.refresh()
     with load.open(hipparcos.URL) as f:
         df = hipparcos.load_dataframe(f)
@@ -124,8 +172,9 @@ def main(stdscr):
     moon_init_obs = observer.at(t_init).observe(bodies["Moon"])
     moon_az, moon_alt, _ = moon_init_obs.apparent().altaz()
     azimuth = moon_az.degrees
-    alt = moon_alt.degrees
+    alt = max(-90, min(90, moon_alt.degrees))
 
+    drawn_labels = {} # drawn labels
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()
@@ -134,7 +183,7 @@ def main(stdscr):
         # auto rotate
         is_locked = (fov <= deepzoom_fov and focused_body in bodies)
         if auto_rotate and not is_locked:
-            azimuth = (azimuth + 0.1) % 360 
+            azimuth = (azimuth + 0.1) % 360
 
         ## update camera on our focused body if fov is locked in
         if is_locked:
@@ -143,7 +192,8 @@ def main(stdscr):
             # update ui stuff
             center_az, center_alt, _ = center_position.altaz()            
             azimuth = center_az.degrees
-            alt = center_alt.degrees
+            raw_alt = center_alt.degrees
+            alt = max(-90.0, min(90.0, raw_alt))
         else:
             # just move it yourself
             center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
@@ -158,13 +208,14 @@ def main(stdscr):
             limit = (fov/2 * 2)**2
             for i in range(len(x_stars)):
                 if x_stars[i]**2 + y_stars[i]**2 > limit: continue
+                # coordinates relative to the screen
                 sx = (x_stars[i] / (fov/2) + 1) * (w / 2)
                 sy = (-y_stars[i] / (fov/2) + 1) * (h / 2)
                 s_addch(stdscr, sy, sx, '.', curses.color_pair(2))
 
         ## draw celestial bodies
         body_data = {}
-        
+        drawn_labels = {} # reset
         for name, body in bodies.items():
             observation = observer.at(t).observe(body)
             astrometric = observation.apparent()
@@ -183,11 +234,21 @@ def main(stdscr):
                 draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val))
                 dist = observation.distance().au
                 ra, dec, _ = astrometric.radec()
-                body_data = { 'name': name, 'dist': dist, 'illum': illum_val, 'ra': ra, 'dec': dec, 'sx': sx }
+                body_data = { 'name': name, 'dist': dist, 'illum': illum_val, 'ra': ra, 'dec': dec }
             else:
-                # draw label
-                label = name[:3] if fov < 5.0 else name[0]
-                s_addch(stdscr, sy, sx, label[0], curses.A_BOLD | curses.color_pair(1))
+                ## draw labels
+                # add real estate, only one can occupy a pixel
+                is_occupied = False
+                check_range = 2
+                for dy in range(-1, 2):
+                    for dx in range(-check_range, check_range):
+                        if (int(sy)+dy) in drawn_labels and (int(sx)+dx) in drawn_labels[int(sy)+dy]:
+                            is_occupied = True
+                if not is_occupied:
+                    label = name[:3] if fov < 5.0 else name[0]
+                    s_addch(stdscr, sy, sx, label[0], curses.A_BOLD | curses.color_pair(1))
+                    # mark pixel as occupied
+                    drawn_labels.setdefault(int(sy), set()).add(int(sx))
 
         ## draw focus panel
         if body_data:
@@ -196,7 +257,6 @@ def main(stdscr):
                 f"--- {body_data['name']}{horizon_msg} ---",
                 f"Dist: {body_data['dist']:.5f} AU",
                 f"Phase: {body_data['illum']*100:.1f}%",
-                f"Screen X: {int(body_data['sx'])} (Center is {w//2})", 
                 f"RA: {body_data['ra'].hours:.2f}h",
                 f"Dec: {body_data['dec'].degrees:.2f}"
             ]
@@ -206,10 +266,8 @@ def main(stdscr):
                     except: pass
 
         ### controls
-        norm_alt = normalize_angle(alt)
-        norm_az = normalize_angle(azimuth)
         mode = " [LOCKED]" if is_locked else (" [AUTO]" if auto_rotate else "")
-        status = f"Az:{norm_az:.1f} Alt:{norm_alt:.1f} Zoom:{fov:.3f}{mode} | 'r' rotate, 'w/s' zoom, 'q' quit"
+        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f}{mode} | 'r' rotate, 'w/s' zoom, 'q' quit"
         try: stdscr.addstr(0, 0, status[:w-1], curses.A_REVERSE)
         except: pass
 
@@ -224,6 +282,7 @@ def main(stdscr):
         if key == ord('w'): fov = max(0.001, fov * 0.9)
         if key == ord('s'): fov = min(120, fov * 1.1)
         azimuth %= 360 # make azimuth roll back
+        time.sleep(0.05) # 20 FPS
 
 if __name__ == "__main__":
     curses.wrapper(main)
