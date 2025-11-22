@@ -53,12 +53,12 @@ def main(stdscr):
     # load data
     ts, planets, observer, bodies, stars = load_data(stdscr, h, w)
 
-    # focus on the moon by default
+    # focus on the sun by default
     t_init = ts.now()
-    moon_init_obs = observer.at(t_init).observe(bodies["Moon"])
-    moon_az, moon_alt, _ = moon_init_obs.apparent().altaz()
-    azimuth = moon_az.degrees
-    alt = max(-90, min(90, moon_alt.degrees))
+    sun_init_obs = observer.at(t_init).observe(bodies["Sun"])
+    sun_az, sun_alt, _ = sun_init_obs.apparent().altaz()
+    azimuth = sun_az.degrees
+    alt = max(-90, min(90, sun_alt.degrees))
 
     drawn_labels = {} # drawn labels
     while True:
