@@ -9,7 +9,6 @@ from skyfield import almanac
 from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
-
 # internal modules
 from renderer import s_addch, start_menu, draw_circle
 from data_loader import load_data
@@ -107,16 +106,13 @@ def main(stdscr):
             observation = observer.at(t).observe(body)
             astrometric = observation.apparent()
             x_body, y_body = projection(astrometric)
-            
             # coords relative to the screen
             sx = (x_body / (fov/2) + 1) * (w / 2)
             sy = (-y_body / (fov/2) + 1) * (h / 2)
-            
             illum_val = 1.0
             if name == "Moon":
-                # TODO: this actually doesn't give proper data, figure this out.
+                # moon phase
                 illum_val = almanac.fraction_illuminated(planets, 'moon', t)
-
             if name == focused_body and fov <= deepzoom_fov:
                 draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val))
                 dist = observation.distance().au

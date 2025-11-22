@@ -58,9 +58,10 @@ def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
     center_x = int(x + 0.5)
 
     # light direction based on phase
-    angle = (1.0 - illumination) * math.pi 
-    lx = math.sin(angle)
-    lz = math.cos(angle)
+    cos_phase_angle = 2.0 * illumination - 1.0
+    cos_phase_angle = max(-1.0, min(1.0, cos_phase_angle)) 
+    lx = math.sqrt(1.0 - cos_phase_angle**2)
+    lz = cos_phase_angle 
 
     # white (bold)
     attr = curses.color_pair(1) | curses.A_BOLD
@@ -84,9 +85,9 @@ def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
             dot = px * lx + pz * lz
             brightness = max(0, dot)
             
-            if brightness > 0.05:
+            if brightness > 0.001:
                 # lit side
-                idx = int(brightness * (len(charmap) - 1))
+                idx = max(1, int(brightness * (len(charmap) - 1)))
                 char = charmap[idx]
                 s_addch(stdscr, center_y + dy, center_x + dx, char, attr)
             else:
