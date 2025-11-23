@@ -177,7 +177,8 @@ def main(stdscr):
 
         ### controls
         status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'q' quit"
-        try: stdscr.addstr(0, 0, status[:w-1], curses.A_REVERSE)
+        status_focus = f"'s' unzoom, 'left/right' showcase planets, 'e' change target"
+        try: stdscr.addstr(0, 0, status_focus[:w-1] if is_locked else status[:w-1], curses.A_REVERSE)
         except: pass
 
         ### time
