@@ -1,6 +1,7 @@
 """
 cosmodroma
 """
+
 import math
 import curses
 import time
@@ -62,6 +63,8 @@ def main(stdscr):
     sun_az, sun_alt, _ = observer.at(t_init).observe(bodies["Sun"]).apparent().altaz()
     azimuth, alt = sun_az.degrees, max(-90, min(90, sun_alt.degrees))
     drawn_labels = {} 
+    min_distance_sq = float('inf')
+    closest_body_in_view = None
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()
@@ -105,8 +108,12 @@ def main(stdscr):
             # coords relative to the screen
             sx = (x_body / (fov/2) + 1) * (w / 2)
             sy = (-y_body / (fov/2) + 1) * (h / 2)
-
+            distance_sq = x_body**2 + y_body**2
+            if distance_sq < min_distance_sq:
+                min_distance_sq = distance_sq
+                closest_body_in_view = name
             # colors per planet
+            has_rings = (name in ["Saturn", "Uranus", "Neptune"]) # hehe
             color_attr = curses.color_pair(1)
             if name == "Mars": color_attr = curses.color_pair(3)
             elif name == "Sun": color_attr = curses.color_pair(4) | curses.A_BOLD 
@@ -126,8 +133,7 @@ def main(stdscr):
             if name == "Moon":
                 # moon phase
                 illum_val = almanac.fraction_illuminated(planets, 'moon', t)
-
-            has_rings = (name in ["Saturn", "Uranus", "Neptune"]) # hehe
+            
             if name == focused_body and fov <= deepzoom_fov:
                 true_and_real_ring_attr = ring_attr if has_rings else None
                 draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), 
@@ -145,8 +151,14 @@ def main(stdscr):
                         if (int(sy)+dy) in drawn_labels and (int(sx)+dx) in drawn_labels[int(sy)+dy]:
                             is_occupied = True
                 if not is_occupied:
-                    label = name[:3] if fov < 5.0 else name[0]
-                    s_addch(stdscr, sy, sx, label[0], curses.A_BOLD | color_attr)
+                    if fov > 5.0:
+                        # planet marker
+                        s_addch(stdscr, sy, sx, '●', curses.A_BOLD | color_attr)
+                    else:
+                        # zoomed shows name
+                        if 0 <= sy < h and 0 <= sx < w - len(name):
+                            try: stdscr.addstr(int(sy), int(sx), name, curses.A_BOLD | color_attr)
+                            except: pass
                     # mark pixel as occupied
                     drawn_labels.setdefault(int(sy), set()).add(int(sx))
 
@@ -210,9 +222,15 @@ def main(stdscr):
             continue
         if key == curses.KEY_LEFT: azimuth -= 2
         if key == curses.KEY_RIGHT: azimuth += 2
-        if key == curses.KEY_UP: alt = min(90, alt + 2)
-        if key == curses.KEY_DOWN: alt = max(-90, alt - 2)
-        if key == ord('w'): fov = max(0.001, fov * 0.9)
+        if key == curses.KEY_UP: alt =+ 2
+        if key == curses.KEY_DOWN: alt =- 2
+        if key == ord('w'): 
+            new_fov = max(0.001, fov * 0.9)
+            if not is_locked and fov > deepzoom_fov and new_fov <= deepzoom_fov:
+                if closest_body_in_view:
+                    focused_body = closest_body_in_view
+                    new_fov = deepzoom_fov 
+            fov = new_fov
         if key == ord('s'): fov = min(120, fov * 1.1)
         azimuth %= 360 # make azimuth roll back
 
