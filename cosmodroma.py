@@ -152,28 +152,47 @@ def main(stdscr):
 
         ### controls
         target_str = f" Target:{focused_body}" if not is_locked else ""
-        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f}{target_str} | 'r' rotate, 'w/s' zoom, 'e' target, 'q' quit"
+        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f}{target_str} | 'w/s' zoom, 'e' target, 'q' quit"
         try: stdscr.addstr(0, 0, status[:w-1], curses.A_REVERSE)
         except: pass
-
         ## input
         key = stdscr.getch()
         if key == ord('q'): break
         if key == ord('e'):
-            stdscr.nodelay(0)
-            curses.echo()
-            prompt = "Enter target name (e.g., Moon, Mars, Sun) and press ENTER: "
-            stdscr.addstr(h-2, 0, prompt, curses.A_REVERSE)
+            # TODO: make a way that doesn't fkn restore to terminal ffs
             try:
-                input_bytes = stdscr.getstr(h-2, len(prompt), 30) # get input
-                target_name = input_bytes.decode('utf-8').strip().title()
-            except:
-                target_name = ""
+                curses.nocbreak()
+                stdscr.keypad(False)
+                curses.echo()
+                curses.curs_set(1)
+                curses.endwin()
+                try:
+                    # WHY
+                    target_name = input("Enter target name (Moon, Mars, Sun): ").strip().title()
+                except Exception:
+                    target_name = ""
+            finally:
+                stdscr = curses.initscr() # new instance
+                curses.noecho()
+                curses.cbreak()
+                stdscr.keypad(True)
+                try:
+                    curses.curs_set(0)
+                except:
+                    pass
+                stdscr.nodelay(1)
+                stdscr.clear()
+                stdscr.refresh()
+                try:
+                    sh, sw = stdscr.getmaxyx()
+                    h, w = sh, sw
+                except:
+                    pass
             if target_name in bodies:
+                is_locked = True
                 focused_body = target_name
-            curses.noecho()
-            stdscr.addstr(h-2, 0, ' ' * w)
-            stdscr.nodelay(1)
+                fov = deepzoom_fov # lol
+            continue
         if key == curses.KEY_LEFT: azimuth -= 2
         if key == curses.KEY_RIGHT: azimuth += 2
         if key == curses.KEY_UP: alt = min(90, alt + 2)
