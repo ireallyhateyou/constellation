@@ -28,13 +28,6 @@ def main(stdscr):
     preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
     focused_body = "Sun" # body we focus on
-    pan_active = False
-    pan_start_az = azimuth
-    pan_start_alt = alt
-    pan_target_az = azimuth
-    pan_target_alt = alt
-    pan_start_time = 0.0
-    pan_duration = 0.35  # seconds to complete pan
 
     # colours
     if curses.has_colors():
@@ -65,23 +58,9 @@ def main(stdscr):
 
     # focus on the sun by default
     t_init = ts.now()
-    if pan_active: # I forgot what this does
-        elapsed = time.time() - pan_start_time
-        frac = min(1.0, max(0.0, elapsed / pan_duration))
-        d_az = normalize_angle(pan_target_az - pan_start_az)
-        azimuth = (pan_start_az + d_az * frac) % 360
-        alt = pan_start_alt + (pan_target_alt - pan_start_alt) * frac
-        alt = max(-90.0, min(90.0, alt))
-        if frac >= 1.0:
-            pan_active = False
-            pass
-
-    sun_init_obs = observer.at(t_init).observe(bodies["Sun"])
-    sun_az, sun_alt, _ = sun_init_obs.apparent().altaz()
-    azimuth = sun_az.degrees
-    alt = max(-90, min(90, sun_alt.degrees))
-
-    drawn_labels = {} # drawn labels
+    sun_az, sun_alt, _ = observer.at(t_init).observe(bodies["Sun"]).apparent().altaz()
+    azimuth, alt = sun_az.degrees, max(-90, min(90, sun_alt.degrees))
+    drawn_labels = {} 
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()

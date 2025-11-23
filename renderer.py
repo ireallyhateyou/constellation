@@ -37,7 +37,7 @@ def start_menu(stdscr):
         hint = "Use UP/DOWN to select, ENTER to confirm"
         stdscr.addstr(h - 2, w//2 - len(hint)//2, hint, curses.color_pair(1))
         key = stdscr.getch()
-        
+  
         # inputs
         if key == curses.KEY_UP:
             current_option = (current_option - 1) % len(options)
