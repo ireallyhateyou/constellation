@@ -13,6 +13,8 @@ from skyfield.projections import build_stereographic_projection
 # internal modules
 from renderer import s_addch, start_menu, draw_circle
 from data_loader import load_data
+import datetime
+from zoneinfo import ZoneInfo
 
 def normalize_angle(degrees):
     # force angles into [-180, 180]
@@ -57,6 +59,7 @@ def main(stdscr):
 
     # load data
     ts, planets, observer, bodies, stars = load_data(stdscr, h, w)
+    planets_list = list(bodies.keys())
     drawn_labels = {} 
     min_distance_sq = float('inf')
     closest_body_in_view = None
@@ -176,6 +179,14 @@ def main(stdscr):
         status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'q' quit"
         try: stdscr.addstr(0, 0, status[:w-1], curses.A_REVERSE)
         except: pass
+
+        ### time
+        nyc_tz = ZoneInfo("America/New_York")
+        now = datetime.datetime.now(nyc_tz)
+        time_str = f"New York, NY ; {now.strftime('%Hh%M')}"
+        try: stdscr.addstr(h-1, w - len(time_str) - 1, time_str, curses.color_pair(1))
+        except: pass
+
         ## input
         key = stdscr.getch()
         if key == ord('q'): break
@@ -214,10 +225,18 @@ def main(stdscr):
                 focused_body = target_name
                 fov = deepzoom_fov # lol
             continue
-        if key == curses.KEY_LEFT: azimuth -= 2
-        if key == curses.KEY_RIGHT: azimuth += 2
-        if key == curses.KEY_UP: alt = min(90, alt + 2)
-        if key == curses.KEY_DOWN: alt = max(-90, alt - 2)
+        if is_locked:
+            if key == curses.KEY_RIGHT:
+                current_idx = planets_list.index(focused_body)
+                focused_body = planets_list[(current_idx + 1) % len(planets_list)]
+            if key == curses.KEY_LEFT:
+                current_idx = planets_list.index(focused_body)
+                focused_body = planets_list[(current_idx - 1) % len(planets_list)]
+        else:
+            if key == curses.KEY_LEFT: azimuth -= 2
+            if key == curses.KEY_RIGHT: azimuth += 2
+            if key == curses.KEY_UP: alt = min(90, alt + 2)
+            if key == curses.KEY_DOWN: alt = max(-90, alt - 2)
         if key == ord('w'): 
             new_fov = max(0.001, fov * 0.9)
             if not is_locked and fov > deepzoom_fov and new_fov <= deepzoom_fov:
