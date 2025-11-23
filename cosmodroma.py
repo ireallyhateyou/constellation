@@ -29,7 +29,7 @@ def main(stdscr):
     fov = 10.0 
     scale = " .:!+*$#@"
     preview_radius = 5
-    deepzoom_fov = 0.01 # fov required for focus
+    deepzoom_fov = 0.041 # fov required for focus
     focused_body = "ISS" # body we focus on
 
     # colours

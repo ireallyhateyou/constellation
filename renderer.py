@@ -22,12 +22,12 @@ def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
             pass
 
 def draw_iss(stdscr, y, x, color_attr):
-    lines = iss_ascii.strip().split('\n')
+    lines = iss_ascii.splitlines()
     h_ascii = len(lines)
     w_ascii = max(len(line) for line in lines)
     
-    start_y = int(y - h_ascii // 2)
-    start_x = int(x - w_ascii // 2)
+    start_y = round(y - h_ascii / 2)
+    start_x = round(x - w_ascii / 2)
     
     for i, line in enumerate(lines):
         for j, char in enumerate(line):
