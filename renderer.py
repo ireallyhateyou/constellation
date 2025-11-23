@@ -54,7 +54,7 @@ def start_menu(stdscr):
                 stdscr.getch()
             if current_option == 2: return False # quit
 
-def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0, color_attr=None):
+def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0, color_attr=None, has_rings=False):
     if color_attr is None:
         color_attr = curses.color_pair(1) | curses.A_BOLD # white (bold)
 
@@ -69,35 +69,48 @@ def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0, color_attr=None
 
     # colour attribute
     attr = color_attr
+    draw_radius_y = int(radius * 1.2) if has_rings else radius
+    draw_radius_x = int(radius * 4.5) if has_rings else radius * 2
 
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius * 2, radius * 2 + 1):
+    for dy in range(-draw_radius_y, draw_radius_y + 1):
+        for dx in range(-draw_radius_x, draw_radius_x + 1):
             # correct aspect ratio
             dist_sq = (dy * dy) + (dx / 2.0) ** 2
             dist = math.sqrt(dist_sq)
-            if dist > radius: continue 
-
-            # 3d sphere
-            px = (dx / 2.0) / radius
-            py = dy / radius
-            pz_sq = 1.0 - px*px - py*py
+            is_sphere = dist <= radius
             
-            if pz_sq < 0: continue
-            pz = math.sqrt(pz_sq)
+            # 3d sphere math
+            pz_sq = -1.0
+            if is_sphere:
+                px = (dx / 2.0) / radius
+                py = dy / radius
+                pz_sq = 1.0 - px*px - py*py
 
-            # lambert shading - https://lavalle.pl/vr/node197.html
-            dot = px * lx + pz * lz
-            brightness = max(0, dot)
-            
-            if brightness > 0.001:
-                # lit side
-                idx = max(1, int(brightness * (len(charmap) - 1)))
-                char = charmap[idx]
-                s_addch(stdscr, center_y + dy, center_x + dx, char, attr)
-            else:
-                # dark hemisphere
-                # make a grid pattern
-                is_grid = (center_x + dx) % 2 == 0 and (center_y + dy) % 2 == 0
-                char = '.' if is_grid else ' ' 
-                if dist > radius - 1: char = ':' 
-                s_addch(stdscr, center_y + dy, center_x + dx, char, curses.color_pair(2) | curses.A_BOLD)
+                if pz_sq >= 0: pz = math.sqrt(pz_sq)
+
+                # lambert shading - https://lavalle.pl/vr/node197.html
+                dot = px * lx + pz * lz
+                brightness = max(0, dot)
+                    
+                if brightness > 0.001:
+                    # lit side
+                    idx = max(1, int(brightness * (len(charmap) - 1)))
+                    char = charmap[idx]
+                    s_addch(stdscr, center_y + dy, center_x + dx, char, attr)
+                else:
+                    # dark side
+                    is_grid = (center_x + dx) % 2 == 0 and (center_y + dy) % 2 == 0
+                    char = '.' if is_grid else ' ' 
+                    if dist > radius - 1: char = ':' 
+                    s_addch(stdscr, center_y + dy, center_x + dx, char, curses.color_pair(2) | curses.A_BOLD)
+            elif has_rings:
+                # Ellipse equation: 
+                # Flatten Y by multiplying it (simulating tilt)
+                # Standard X (dx/2 for aspect ratio)
+                ring_y = dy * 3.0 # Tilt factor (higher = flatter rings)
+                ring_dist = math.sqrt((dx/2.0)**2 + ring_y**2)
+                
+                # Inner and Outer radius of rings (relative to planet radius)
+                if radius * 1.4 < ring_dist < radius * 2.3:
+                    # Draw ring character
+                    s_addch(stdscr, center_y + dy, center_x + dx, '-', color_attr)

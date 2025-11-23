@@ -14,7 +14,7 @@ def load_data(stdscr, h, w):
     observer = earth + wgs84.latlon(lat, long)
     bodies = { "Mars": planets["mars"], "Venus": planets["venus"], 
                "Jupiter": planets["jupiter barycenter"], "Moon": planets["moon"],
-               "Sun": planets["sun"], }
+               "Sun": planets["sun"], "Saturn": planets["saturn barycenter"], "Saturn": planets["saturn barycenter"] }
 
     ## star data
     ## hipparcos

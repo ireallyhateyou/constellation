@@ -115,8 +115,9 @@ def main(stdscr):
             if name == "Moon":
                 # moon phase
                 illum_val = almanac.fraction_illuminated(planets, 'moon', t)
+            has_rings = (name == "Saturn") # hehe
             if name == focused_body and fov <= deepzoom_fov:
-                draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), color_attr)
+                draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), color_attr, has_rings)
                 dist = observation.distance().au
                 ra, dec, _ = astrometric.radec()
                 body_data = { 'name': name, 'dist': dist, 'illum': illum_val, 'ra': ra, 'dec': dec }
