@@ -57,11 +57,6 @@ def main(stdscr):
 
     # load data
     ts, planets, observer, bodies, stars = load_data(stdscr, h, w)
-
-    # focus on the sun by default
-    t_init = ts.now()
-    sun_az, sun_alt, _ = observer.at(t_init).observe(bodies["Sun"]).apparent().altaz()
-    azimuth, alt = sun_az.degrees, max(-90, min(90, sun_alt.degrees))
     drawn_labels = {} 
     min_distance_sq = float('inf')
     closest_body_in_view = None
@@ -178,8 +173,7 @@ def main(stdscr):
                     except: pass
 
         ### controls
-        target_str = f" Target:{focused_body}" if not is_locked else ""
-        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f}{target_str} | 'w/s' zoom, 'e' target, 'q' quit"
+        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'q' quit"
         try: stdscr.addstr(0, 0, status[:w-1], curses.A_REVERSE)
         except: pass
         ## input
@@ -222,8 +216,8 @@ def main(stdscr):
             continue
         if key == curses.KEY_LEFT: azimuth -= 2
         if key == curses.KEY_RIGHT: azimuth += 2
-        if key == curses.KEY_UP: alt =+ 2
-        if key == curses.KEY_DOWN: alt =- 2
+        if key == curses.KEY_UP: alt = min(90, alt + 2)
+        if key == curses.KEY_DOWN: alt = max(-90, alt - 2)
         if key == ord('w'): 
             new_fov = max(0.001, fov * 0.9)
             if not is_locked and fov > deepzoom_fov and new_fov <= deepzoom_fov:
