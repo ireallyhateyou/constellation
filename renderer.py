@@ -2,13 +2,16 @@ import curses
 import math
 
 iss_ascii = """
+                             
    |#| |#|           |#| |#|
    |#| |#| -;__@__   |#| |#|
    |#| |#|  ___|___  |#| |#|
   =@@@@@@@=[_______]=@@@@@@@=
    |#| |#| !!  |  !! |#| |#|
    |#| |#| !!__|__!! |#| |#|
-   |#| |#|     ;     |#| |#|"""
+   |#| |#|     ;     |#| |#|
+                             
+"""
 
 def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
     h, w = stdscr.getmaxyx()

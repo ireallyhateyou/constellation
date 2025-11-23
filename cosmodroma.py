@@ -58,7 +58,7 @@ def main(stdscr):
     stdscr.refresh()
 
     # load data
-    ts, planets, observer, bodies, stars = load_data(stdscr, h, w)
+    ts, planets, observer, topos_observer, bodies, stars = load_data(stdscr, h, w)
     planets_list = list(bodies.keys())
     drawn_labels = {} 
     min_distance_sq = float('inf')
@@ -70,10 +70,17 @@ def main(stdscr):
         is_locked = (fov <= deepzoom_fov and focused_body in bodies) # if locked in...
         ## update camera on our focused body if fov is locked in
         if is_locked:
-            target_body = observer.at(t).observe(bodies[focused_body])
-            center_position = target_body.apparent()
-            # update ui stuff
-            center_az, center_alt, _ = center_position.altaz()            
+            body_to_focus = bodies[focused_body]
+            if focused_body == "ISS":
+                # EarthSatellite (TLEs)
+                topocentric = (body_to_focus - topos_observer).at(t)
+                center_az, center_alt, _ = topocentric.altaz()
+                center_position = observer.at(t).from_altaz(alt_degrees=center_alt.degrees, az_degrees=center_az.degrees)
+            else:
+                # planets (JPL Ephemeris)
+                target_body = observer.at(t).observe(body_to_focus)
+                center_position = target_body.apparent()
+                center_az, center_alt, _ = center_position.altaz()          
             azimuth = center_az.degrees
             raw_alt = center_alt.degrees
             alt = max(-90.0, min(90.0, raw_alt))
@@ -100,8 +107,16 @@ def main(stdscr):
         body_data = {}
         drawn_labels = {} # reset
         for name, body in bodies.items():
-            observation = observer.at(t).observe(body)
-            astrometric = observation.apparent()
+            current_dist = None
+            if name == "ISS":
+                topocentric = (body - topos_observer).at(t)
+                az_ang, alt_ang, current_dist = topocentric.altaz()
+                astrometric = observer.at(t).from_altaz(alt_degrees=alt_ang.degrees, az_degrees=az_ang.degrees)
+            else:
+                # observation for planets
+                observation = observer.at(t).observe(body)
+                astrometric = observation.apparent()
+                current_dist = observation.distance() # 
             x_body, y_body = projection(astrometric)
             # coords relative to the screen
             sx = (x_body / (fov/2) + 1) * (w / 2)
@@ -134,7 +149,7 @@ def main(stdscr):
             if name == "Moon":
                 # moon phase
                 illum_val = almanac.fraction_illuminated(planets, 'moon', t)
-            
+ 
             # draw focused body if in deep zoom
             if name == focused_body and fov <= deepzoom_fov:
                 if name == "ISS":
@@ -143,11 +158,10 @@ def main(stdscr):
                     true_and_real_ring_attr = ring_attr if has_rings else None
                     draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), 
                                 color_attr, has_rings, true_and_real_ring_attr)
-                dist = observation.distance().au
-                dist_str = f"{dist:.5f} AU"
-                if name == "ISS":
-                    dist_km = dist * 149597870.7 
-                    dist_str = f"{dist_km:.1f} km"
+                if focused_body == "ISS":
+                    dist_str = f"{(current_dist.km):.1f} km"
+                else:
+                    dist_str = f"{(current_dist.au):.5f} AU"
                 ra, dec, _ = astrometric.radec()
                 body_data = { 'name': name, 'dist': dist_str, 'illum': illum_val, 'ra': ra, 'dec': dec }
             else:
