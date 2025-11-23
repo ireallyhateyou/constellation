@@ -11,7 +11,7 @@ from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
 # internal modules
-from renderer import s_addch, start_menu, draw_circle
+from renderer import s_addch, start_menu, draw_circle, draw_iss
 from data_loader import load_data
 import datetime
 from zoneinfo import ZoneInfo
@@ -30,7 +30,7 @@ def main(stdscr):
     scale = " .:!+*$#@"
     preview_radius = 5
     deepzoom_fov = 0.01 # fov required for focus
-    focused_body = "Sun" # body we focus on
+    focused_body = "ISS" # body we focus on
 
     # colours
     if curses.has_colors():
@@ -110,6 +110,7 @@ def main(stdscr):
             if distance_sq < min_distance_sq:
                 min_distance_sq = distance_sq
                 closest_body_in_view = name
+
             # colors per planet
             has_rings = (name in ["Saturn", "Uranus", "Neptune"]) # hehe
             color_attr = curses.color_pair(1)
@@ -127,18 +128,28 @@ def main(stdscr):
             elif name == "Neptune":
                 color_attr = curses.color_pair(7)
                 ring_attr = curses.color_pair(1)
+            elif name == "ISS":
+                color_attr = curses.color_pair(8) | curses.A_BOLD
             illum_val = 1.0
             if name == "Moon":
                 # moon phase
                 illum_val = almanac.fraction_illuminated(planets, 'moon', t)
             
+            # draw focused body if in deep zoom
             if name == focused_body and fov <= deepzoom_fov:
-                true_and_real_ring_attr = ring_attr if has_rings else None
-                draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), 
-                            color_attr, has_rings, true_and_real_ring_attr)
+                if name == "ISS":
+                    draw_iss(stdscr, sy, sx, color_attr)
+                else:
+                    true_and_real_ring_attr = ring_attr if has_rings else None
+                    draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), 
+                                color_attr, has_rings, true_and_real_ring_attr)
                 dist = observation.distance().au
+                dist_str = f"{dist:.5f} AU"
+                if name == "ISS":
+                    dist_km = dist * 149597870.7 
+                    dist_str = f"{dist_km:.1f} km"
                 ra, dec, _ = astrometric.radec()
-                body_data = { 'name': name, 'dist': dist, 'illum': illum_val, 'ra': ra, 'dec': dec }
+                body_data = { 'name': name, 'dist': dist_str, 'illum': illum_val, 'ra': ra, 'dec': dec }
             else:
                 ## draw labels
                 # add real estate, only one can occupy a pixel
@@ -165,8 +176,8 @@ def main(stdscr):
             horizon_msg = " [BELOW HORIZON]" if alt < 0 else ""
             lines = [
                 f"--- {body_data['name']}{horizon_msg} ---",
-                f"Dist: {body_data['dist']:.5f} AU",
-                f"Phase: {body_data['illum']*100:.1f}%",
+                f"Dist: {body_data['dist']}",
+                *([f"Phase: {body_data['illum']*100:.1f}%"] if body_data['name'] == 'Moon' else []),
                 f"RA: {body_data['ra'].hours:.2f}h",
                 f"Dec: {body_data['dec'].degrees:.2f}"
             ]
@@ -201,7 +212,8 @@ def main(stdscr):
                 curses.endwin()
                 try:
                     # WHY
-                    target_name = input("Enter target name (Moon, Mars, Sun): ").strip().title()
+                    target_name = input("Enter target name (Moon, Mars, ISS, Sun): ").strip().title()
+                    if target_name.upper() == "ISS": target_name = "ISS"
                 except Exception:
                     target_name = ""
             finally:

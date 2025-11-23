@@ -8,8 +8,7 @@ iss_ascii = """
   =@@@@@@@=[_______]=@@@@@@@=
    |#| |#| !!  |  !! |#| |#|
    |#| |#| !!__|__!! |#| |#|
-   |#| |#|     ;     |#| |#|
-"""
+   |#| |#|     ;     |#| |#|"""
 
 def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
     h, w = stdscr.getmaxyx()
@@ -18,6 +17,19 @@ def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
             stdscr.addch(int(y), int(x), char, attr)
         except:
             pass
+
+def draw_iss(stdscr, y, x, color_attr):
+    lines = iss_ascii.strip().split('\n')
+    h_ascii = len(lines)
+    w_ascii = max(len(line) for line in lines)
+    
+    start_y = int(y - h_ascii // 2)
+    start_x = int(x - w_ascii // 2)
+    
+    for i, line in enumerate(lines):
+        for j, char in enumerate(line):
+            if char != ' ':
+                s_addch(stdscr, start_y + i, start_x + j, char, color_attr)
 
 def start_menu(stdscr):
     curses.curs_set(0)
