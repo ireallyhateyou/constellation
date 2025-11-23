@@ -54,7 +54,10 @@ def start_menu(stdscr):
                 stdscr.getch()
             if current_option == 2: return False # quit
 
-def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
+def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0, color_attr=None):
+    if color_attr is None:
+        color_attr = curses.color_pair(1) | curses.A_BOLD # white (bold)
+
     center_y = int(y + 0.5)
     center_x = int(x + 0.5)
 
@@ -64,8 +67,8 @@ def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0):
     lx = math.sqrt(1.0 - cos_phase_angle**2)
     lz = cos_phase_angle 
 
-    # white (bold)
-    attr = curses.color_pair(1) | curses.A_BOLD
+    # colour attribute
+    attr = color_attr
 
     for dy in range(-radius, radius + 1):
         for dx in range(-radius * 2, radius * 2 + 1):
