@@ -54,7 +54,7 @@ def start_menu(stdscr):
                 stdscr.getch()
             if current_option == 2: return False # quit
 
-def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0, color_attr=None, has_rings=False):
+def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0, color_attr=None, has_rings=False, ring_attr=None):
     if color_attr is None:
         color_attr = curses.color_pair(1) | curses.A_BOLD # white (bold)
 
@@ -104,13 +104,9 @@ def draw_circle(stdscr, y, x, radius, charmap, illumination=1.0, color_attr=None
                     if dist > radius - 1: char = ':' 
                     s_addch(stdscr, center_y + dy, center_x + dx, char, curses.color_pair(2) | curses.A_BOLD)
             elif has_rings:
-                # Ellipse equation: 
-                # Flatten Y by multiplying it (simulating tilt)
-                # Standard X (dx/2 for aspect ratio)
-                ring_y = dy * 3.0 # Tilt factor (higher = flatter rings)
+                # Ellipse equation (I have no clue what this does)
+                ring_y = dy * 3.0 # higher = flatter rings
                 ring_dist = math.sqrt((dx/2.0)**2 + ring_y**2)
-                
-                # Inner and Outer radius of rings (relative to planet radius)
                 if radius * 1.4 < ring_dist < radius * 2.3:
-                    # Draw ring character
-                    s_addch(stdscr, center_y + dy, center_x + dx, '-', color_attr)
+                    final_ring_attr = ring_attr if ring_attr is not None else color_attr
+                    s_addch(stdscr, center_y + dy, center_x + dx, '-', final_ring_attr)

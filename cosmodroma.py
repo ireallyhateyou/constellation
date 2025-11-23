@@ -37,6 +37,7 @@ def main(stdscr):
         curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
         curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
         curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+        curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
     # run start menu
     if not start_menu(stdscr):
@@ -104,6 +105,7 @@ def main(stdscr):
             # coords relative to the screen
             sx = (x_body / (fov/2) + 1) * (w / 2)
             sy = (-y_body / (fov/2) + 1) * (h / 2)
+
             # colors per planet
             color_attr = curses.color_pair(1)
             if name == "Mars": color_attr = curses.color_pair(3)
@@ -111,13 +113,25 @@ def main(stdscr):
             elif name == "Jupiter": color_attr = curses.color_pair(4) 
             elif name == "Venus": color_attr = curses.color_pair(5) 
             elif name == "Moon": color_attr = curses.color_pair(1)
+            elif name == "Saturn": 
+                color_attr = curses.color_pair(4) 
+                ring_attr = curses.color_pair(6) | curses.A_BOLD # ring
+            elif name == "Uranus":
+                color_attr = curses.color_pair(2)
+                ring_attr = curses.color_pair(1)
+            elif name == "Neptune":
+                color_attr = curses.color_pair(7)
+                ring_attr = curses.color_pair(1)
             illum_val = 1.0
             if name == "Moon":
                 # moon phase
                 illum_val = almanac.fraction_illuminated(planets, 'moon', t)
-            has_rings = (name == "Saturn") # hehe
+
+            has_rings = (name in ["Saturn", "Uranus", "Neptune"]) # hehe
             if name == focused_body and fov <= deepzoom_fov:
-                draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), color_attr, has_rings)
+                true_and_real_ring_attr = ring_attr if has_rings else None
+                draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), 
+                            color_attr, has_rings, true_and_real_ring_attr)
                 dist = observation.distance().au
                 ra, dec, _ = astrometric.radec()
                 body_data = { 'name': name, 'dist': dist, 'illum': illum_val, 'ra': ra, 'dec': dec }
