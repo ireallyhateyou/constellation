@@ -6,6 +6,8 @@ import math
 import curses
 import time
 import numpy as np
+import datetime
+from zoneinfo import ZoneInfo
 from skyfield import almanac
 from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
@@ -13,8 +15,7 @@ from skyfield.projections import build_stereographic_projection
 # internal modules
 from renderer import s_addch, start_menu, draw_circle, draw_iss
 from data_loader import load_data
-import datetime
-from zoneinfo import ZoneInfo
+from iss import run_iss_map_preview
 
 def normalize_angle(degrees):
     # force angles into [-180, 180]
@@ -201,9 +202,11 @@ def main(stdscr):
                     try: stdscr.addstr(i+2, w - 35, line, curses.color_pair(1))
                     except: pass
 
-        ### controls
+        ### status bar
         status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'q' quit"
-        status_focus = f"'s' unzoom, 'left/right' showcase planets, 'e' change target"
+        status_focus = f"'s' unzoom, 'left/right' showcase planets, 'e' change target" 
+        if is_locked and focused_body == "ISS":
+            status_focus = f"{status_focus}, 'm' map view"
         try: stdscr.addstr(0, 0, status_focus[:w-1] if is_locked else status[:w-1], curses.A_REVERSE)
         except: pass
 
@@ -216,6 +219,9 @@ def main(stdscr):
 
         ## input
         key = stdscr.getch()
+        if key == ord('m') and is_locked and focused_body == "ISS":
+            run_iss_map_preview(stdscr)
+            continue
         if key == ord('q'): break
         if key == ord('e'):
             # TODO: make a way that doesn't fkn restore to terminal ffs
