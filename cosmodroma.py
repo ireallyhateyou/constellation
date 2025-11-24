@@ -13,7 +13,7 @@ from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
 # internal modules
-from renderer import s_addch, start_menu, draw_circle, draw_iss
+from renderer import s_addch, start_menu, draw_circle, draw_iss, LOCATIONS
 from data_loader import load_data
 from iss import iss_map
 
@@ -43,9 +43,11 @@ def main(stdscr):
         curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
         curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
-    # run start menu
-    if not start_menu(stdscr):
+    # run start menu, fetch any selected ctiy
+    selected_city = start_menu(stdscr)
+    if not selected_city:
         return
+    city_data = LOCATIONS[selected_city]
 
     # terminal stuff
     curses.curs_set(0)
@@ -59,7 +61,7 @@ def main(stdscr):
     stdscr.refresh()
 
     # load data
-    ts, planets, observer, topos_observer, bodies, stars = load_data(stdscr, h, w)
+    ts, planets, observer, topos_observer, bodies, stars = load_data(stdscr, h, w, city_data['lat'], city_data['lon'])
     planets_list = list(bodies.keys())
     drawn_labels = {} 
     min_distance_sq = float('inf')
@@ -211,9 +213,9 @@ def main(stdscr):
         except: pass
 
         ### time
-        nyc_tz = ZoneInfo("America/New_York")
-        now = datetime.datetime.now(nyc_tz)
-        time_str = f"New York, NY ; {now.strftime('%Hh%M')}"
+        current_tz = ZoneInfo(city_data['tz'])
+        now = datetime.datetime.now(current_tz)
+        time_str = f"{selected_city} ; {now.strftime('%Hh%M')}"
         try: stdscr.addstr(h-1, w - len(time_str) - 1, time_str, curses.color_pair(1))
         except: pass
 

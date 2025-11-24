@@ -1,11 +1,7 @@
 from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 
-# configuration for spaceslop
-lat = 40.7128 # this is NYC btw
-long = -74.0060
-
-def load_data(stdscr, h, w):
+def load_data(stdscr, h, w, lat=40.7128, long=-74.0060):
     ### load data
     ## jpl ephemeris
     ts = load.timescale()

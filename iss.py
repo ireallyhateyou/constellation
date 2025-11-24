@@ -52,7 +52,6 @@ def project_mercator(lat, lon, map_width, map_height):
     y_norm = (merc_y + max_merc) / (2 * max_merc)
     y_norm = 1.0 - y_norm    
     y = y_norm * map_height
-
     return int(x), int(y)
 
 def iss_map(stdscr):
