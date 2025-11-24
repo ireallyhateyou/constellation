@@ -38,7 +38,7 @@ def start_menu(stdscr):
     curses.curs_set(0)
     stdscr.nodelay(0) # block until input
     current_option = 0
-    options = ["Start Simulation", "About", "Quit"]
+    options = ["Start Simulation", "About&Settings", "Quit"]
     while True:
         stdscr.clear()
         h, w = stdscr.getmaxyx()

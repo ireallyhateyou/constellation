@@ -89,7 +89,7 @@ def main(stdscr):
             # just move it yourself
             center_position = observer.at(t).from_altaz(alt_degrees=alt, az_degrees=azimuth)
 
-        # build the camera view from that center
+        ## build the camera view from that center
         projection = build_stereographic_projection(center_position)
 
         ## draw stars
