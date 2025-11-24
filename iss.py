@@ -55,7 +55,7 @@ def project_mercator(lat, lon, map_width, map_height):
 
     return int(x), int(y)
 
-def run_iss_map_preview(stdscr):
+def iss_map(stdscr):
     stdscr.nodelay(1)
     # color for the marker
     try:

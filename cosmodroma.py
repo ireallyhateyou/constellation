@@ -15,7 +15,7 @@ from skyfield.projections import build_stereographic_projection
 # internal modules
 from renderer import s_addch, start_menu, draw_circle, draw_iss
 from data_loader import load_data
-from iss import run_iss_map_preview
+from iss import iss_map
 
 def normalize_angle(degrees):
     # force angles into [-180, 180]
@@ -220,7 +220,7 @@ def main(stdscr):
         ## input
         key = stdscr.getch()
         if key == ord('m') and is_locked and focused_body == "ISS":
-            run_iss_map_preview(stdscr)
+            iss_map(stdscr)
             continue
         if key == ord('q'): break
         if key == ord('e'):

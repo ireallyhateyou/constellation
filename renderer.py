@@ -73,7 +73,7 @@ def start_menu(stdscr):
             if current_option == 1: 
                 # about
                 stdscr.clear()
-                msg = "this is your very own telescope"
+                msg = "cosmodroma is a terminal planetarium which allows you to track and preview bright stars, planets and satellites in real time"
                 stdscr.addstr(h//2, w//2 - len(msg)//2, msg)
                 stdscr.refresh()
                 stdscr.getch()
