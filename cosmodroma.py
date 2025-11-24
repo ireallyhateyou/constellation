@@ -116,7 +116,7 @@ def main(stdscr):
                 # observation for planets
                 observation = observer.at(t).observe(body)
                 astrometric = observation.apparent()
-                current_dist = observation.distance() # 
+                current_dist = observation.distance()  
             x_body, y_body = projection(astrometric)
             # coords relative to the screen
             sx = (x_body / (fov/2) + 1) * (w / 2)
@@ -173,7 +173,8 @@ def main(stdscr):
                     for dx in range(-check_range, check_range):
                         if (int(sy)+dy) in drawn_labels and (int(sx)+dx) in drawn_labels[int(sy)+dy]:
                             is_occupied = True
-                if not is_occupied:
+                 # don't show satelites since they dont exist in relation to the moon but rather the sun
+                if not is_occupied and name != "ISS":
                     if fov > 5.0:
                         # planet marker
                         s_addch(stdscr, sy, sx, '●', curses.A_BOLD | color_attr)
