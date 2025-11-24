@@ -1,7 +1,7 @@
 # NASA files
 de421.bsp
 hip_main.dat
-stations.txt # ISS
+stations.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
