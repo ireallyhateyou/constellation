@@ -48,7 +48,7 @@ def start_menu(stdscr):
     stdscr.nodelay(0) # block until input
     current_option = 0
     options = ["Start Simulation", "About & Settings", "Quit"]
-    selected_city = "New York" # default city
+    selected_city = "New York, NY" # default city
     
     while True:
         stdscr.clear()
