@@ -3,5 +3,4 @@ skyfield
 pandas
 matplotlib
 numpy
-lightstreamer-client-lib
 requests

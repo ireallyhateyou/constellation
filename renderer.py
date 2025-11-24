@@ -45,7 +45,7 @@ def start_menu(stdscr):
         # titles
         title = "C O S M O D R O M A"
         stdscr.addstr(h//2 - 4, w//2 - len(title)//2, title, curses.A_BOLD | curses.color_pair(2))
-        subtitle = "your telescope to the stars"
+        subtitle = "your terminal planetarium"
         stdscr.addstr(h//2 - 3, w//2 - len(subtitle)//2, subtitle, curses.A_BOLD | curses.color_pair(2))
         # options
         for i, option in enumerate(options):

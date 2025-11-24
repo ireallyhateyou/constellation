@@ -106,7 +106,6 @@ def run_iss_map_preview(stdscr):
             stdscr.addstr(footer_y + 1, start_x, "waiting for ISS data...")
             
         stdscr.addstr(footer_y + 3, start_x, "Press 'm' to return to telescope")
-
         stdscr.refresh()
         key = stdscr.getch()
         if key == ord('m') or key == ord('q'):
