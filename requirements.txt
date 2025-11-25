@@ -4,3 +4,4 @@ pandas
 matplotlib
 numpy
 requests
+lightstreamer-client-lib
