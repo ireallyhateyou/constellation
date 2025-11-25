@@ -28,7 +28,7 @@ class TelemetryListener:
         
         try:
             float_value = float(value)
-            if "Temperature" in readable_name:
+            if "temperature" in readable_name.lower():
                 self.data_store[readable_name] = f"{float_value:.1f}°"
             elif 0 <= float_value <= 100: # if it smells and looks like a percentage...
                 self.data_store[readable_name] = f"{float_value:.1f}%"
