@@ -16,6 +16,7 @@ from skyfield.projections import build_stereographic_projection
 from renderer import s_addch, start_menu, draw_circle, draw_iss, LOCATIONS
 from data_loader import load_data
 from iss import iss_map
+from iss_telemetry import ISSTelemetryStreamer
 
 def normalize_angle(degrees):
     # force angles into [-180, 180]
@@ -48,6 +49,10 @@ def main(stdscr):
     if not selected_city:
         return
     city_data = LOCATIONS[selected_city]
+
+    # start monitoring the ISS
+    telemetry_thread = ISSTelemetryStreamer()
+    telemetry_thread.start()
 
     # terminal stuff
     curses.curs_set(0)
@@ -166,7 +171,10 @@ def main(stdscr):
                 else:
                     dist_str = f"{(current_dist.au):.5f} AU"
                 ra, dec, _ = astrometric.radec()
-                body_data = { 'name': name, 'dist': dist_str, 'illum': illum_val, 'ra': ra, 'dec': dec }
+                extras = {}
+                if name == "ISS":
+                    extras = telemetry_thread.get_data()
+                body_data = { 'name': name, 'dist': dist_str, 'illum': illum_val, 'ra': ra, 'dec': dec, 'extras': extras }
             else:
                 ## draw labels
                 # add real estate, only one can occupy a pixel
@@ -199,6 +207,9 @@ def main(stdscr):
                 f"RA: {body_data['ra'].hours:.2f}h",
                 f"Dec: {body_data['dec'].degrees:.2f}"
             ]
+            if body_data.get('extras'):
+                for k, v in body_data['extras'].items():
+                    lines.append(f"{k}: {v}")
             for i, line in enumerate(lines):
                 if 2+i < h:
                     try: stdscr.addstr(i+2, w - 35, line, curses.color_pair(1))
