@@ -5,12 +5,10 @@ from lightstreamer.client import LightstreamerClient, Subscription
 
 # from: https://iss-mimic.github.io/Mimic/
 iss_map = {
+    "USLAB000039": "Total Mass",
+    "USLAB000059": "Cabin Temperature",
     "NODE3000005": "Urine Tank",
-    "NODE3000004": "Urine Proc",
-    "NODE3000008": "Waste H2O",
-    "NODE3000009": "Clean H2O",
-    "NODE3000006": "H2O Proc State",
-    "NODE3000007": "H2O Proc Step"
+    "USLAB000010": "Gyroscope Momentum"
 }
 
 class TelemetryListener:
@@ -30,7 +28,9 @@ class TelemetryListener:
         
         try:
             float_value = float(value)
-            if 0 <= float_value <= 100: # if it smells and looks like a percentage...
+            if "Temperature" in readable_name:
+                self.data_store[readable_name] = f"{float_value:.1f}°"
+            elif 0 <= float_value <= 100: # if it smells and looks like a percentage...
                 self.data_store[readable_name] = f"{float_value:.1f}%"
             else:
                 self.data_store[readable_name] = f"{float_value:.1f}"
