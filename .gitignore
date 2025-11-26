@@ -2,6 +2,7 @@
 de421.bsp
 hip_main.dat
 stations.txt
+gp.php
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
