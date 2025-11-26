@@ -9,25 +9,29 @@ def load_data(stdscr, h, w, lat=40.7128, long=-74.0060):
     earth = planets["earth"]
     observer = earth + wgs84.latlon(lat, long)
     topos_observer = wgs84.latlon(lat, long)
-    ## iss tle data
-    stdscr.addstr(h//2 + 1, w//2 - 29, "downloading ISS TLE data...")
+    ## satellite data
+    ## NORAD
+    stdscr.addstr(h//2 + 1, w//2 - 29, "downloading NORAD data...")
     stdscr.refresh()
-    stations_list = load.tle_file('https://celestrak.org/NORAD/elements/stations.txt')
-    stations = {s.name: s for s in stations_list}
-    iss = stations['ISS (ZARYA)']
+    sat_file = load.tle_file('https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle')
+    sat_dict = {s.name: s for s in sat_file}
+    satellites = {}
+    for name, sat in sat_dict.items():
+        if "ISS" in name and "ZARYA" in name: satellites["ISS"] = sat
+        elif "HST" in name: satellites["Hubble"] = sat
+        elif "TIANHE" in name: satellites["Tiangong"] = sat
+        elif "CHANDRAYAAN" in name: satellites["Chandrayaan-2"] = sat
+        elif "SRMSAT" in name: satellites["SRMSAT"] = sat
+        elif "ENVIRO" in name: satellites["EnviroSat"] = sat
+
+    ## planetary data
     bodies = { "Mars": planets["mars"], "Venus": planets["venus"],
                "Jupiter": planets["jupiter barycenter"], 
                "Saturn": planets["saturn barycenter"],
                "Uranus": planets["uranus barycenter"],
                "Neptune": planets["neptune barycenter"],
-               "Moon": planets["moon"], "Sun": planets["sun"], "ISS": iss}
-
-    ## satellite data
-    ## NORAD
-    stdscr.addstr(h//2 + 1, w//2 - 29, "downloading NORAD data...")
-    stdscr.refresh()
-    satellites = load.tle_file('https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle')
-    sat_dict = {s.name: s for s in satellites}
+               "Moon": planets["moon"], "Sun": planets["sun"]}
+    bodies.update(satellites)
 
     ## star data
     ## hipparcos
