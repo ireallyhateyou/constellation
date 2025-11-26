@@ -60,12 +60,12 @@ def draw_satellite(stdscr, name, y, x, color_attr):
         ascii_art = hubble_ascii
     else:
         ascii_art = iss_ascii
+
     lines = ascii_art.splitlines()
     h_ascii = len(lines)
     w_ascii = max(len(line) for line in lines)
-    
-    start_y = round(y - h_ascii / 2)
-    start_x = round(x - w_ascii / 2)
+    start_y = int(y - h_ascii / 2) 
+    start_x = int(x - w_ascii / 2)
     
     for i, line in enumerate(lines):
         for j, char in enumerate(line):
