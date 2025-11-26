@@ -2,6 +2,7 @@ import curses
 import math
 import time
 import requests
+from skyfield.api import wgs84
 
 RAW_MAP = """
    :::::::::::''  ''::'      '::::::  `:::::::::::::'.:::::::::::::::
@@ -26,19 +27,6 @@ RAW_MAP = """
    ::::::::::::::::::.:::::::::::::::::::::::::::::::::::::::::::::::
 """
 
-def get_iss_location():
-    url = "http://api.open-notify.org/iss-now.json"
-    try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        position = data["iss_position"]
-        latitude = float(position["latitude"])
-        longitude = float(position["longitude"])
-        return latitude, longitude, data["timestamp"]
-    except:
-        return None, None, None
-
 # project lat long coords to x y coordinates
 def project_mercator(lat, lon, map_width, map_height):
     x = (lon + 180) * (map_width / 360.0)
@@ -54,7 +42,7 @@ def project_mercator(lat, lon, map_width, map_height):
     y = y_norm * map_height
     return int(x), int(y)
 
-def iss_map(stdscr):
+def display_map(stdscr, object, ts):
     stdscr.nodelay(1)
     # color for the marker
     try:
@@ -72,9 +60,11 @@ def iss_map(stdscr):
     current_lat, current_lon, timestamp = None, None, 0
     
     while True:
-        new_lat, new_lon, new_timestamp = get_iss_location()
-        if new_lat is not None: # if successful
-            current_lat, current_lon, timestamp = new_lat, new_lon, new_timestamp
+        timestamp = ts.now()
+        geocentric = object.at(t)
+        subpoint = wgs84.subpoint(geocentric)
+        current_lat = subpoint.latitude.degrees
+        current_lon = subpoint.longitude.degrees
 
         stdscr.clear()
         for i, line in enumerate(map_lines):

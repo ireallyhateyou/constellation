@@ -16,7 +16,7 @@ from skyfield.sgp4lib import EarthSatellite
 # internal modules
 from renderer import s_addch, start_menu, draw_circle, draw_satellite, LOCATIONS
 from data_loader import load_data
-from iss import iss_map
+from satellite_map import display_map
 from iss_telemetry import ISSTelemetryStreamer
 
 def normalize_angle(degrees):
@@ -236,8 +236,8 @@ def main(stdscr):
 
         ## input
         key = stdscr.getch()
-        if key == ord('m') and is_locked and focused_body == "ISS":
-            iss_map(stdscr)
+        if key == ord('m') and is_locked and isinstance(bodies[focused_body], EarthSatellite):
+            display_map(stdscr, bodies[focused_body], ts)
             continue
         if key == ord('q'): break
         if key == ord('e'):
