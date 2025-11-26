@@ -42,8 +42,12 @@ def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
         except:
             pass
 
-def draw_iss(stdscr, y, x, color_attr):
-    lines = iss_ascii.splitlines()
+def draw_satellite(stdscr, name, y, x, color_attr):
+    if name == "Tiangong":
+        ascii_art = tiangong_ascii
+    else:
+        ascii_art = iss_ascii
+    lines = ascii_art.splitlines()
     h_ascii = len(lines)
     w_ascii = max(len(line) for line in lines)
     

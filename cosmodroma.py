@@ -14,7 +14,7 @@ from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
 from skyfield.sgp4lib import EarthSatellite
 # internal modules
-from renderer import s_addch, start_menu, draw_circle, draw_iss, LOCATIONS
+from renderer import s_addch, start_menu, draw_circle, draw_satellite, LOCATIONS
 from data_loader import load_data
 from iss import iss_map
 from iss_telemetry import ISSTelemetryStreamer
@@ -80,7 +80,7 @@ def main(stdscr):
         ## update camera on our focused body if fov is locked in
         if is_locked:
             body_to_focus = bodies[focused_body]
-            if focused_body == "ISS":
+            if isinstance(body_to_focus, EarthSatellite):
                 # EarthSatellite (TLEs)
                 topocentric = (body_to_focus - topos_observer).at(t)
                 center_az, center_alt, _ = topocentric.altaz()
@@ -162,13 +162,13 @@ def main(stdscr):
  
             # draw focused body if in deep zoom
             if name == focused_body and fov <= deepzoom_fov:
-                if name == "ISS":
-                    draw_iss(stdscr, sy, sx, color_attr)
+                if isinstance(body, EarthSatellite):
+                    draw_satellite(stdscr, name, sy, sx, color_attr)
                 else:
                     true_and_real_ring_attr = ring_attr if has_rings else None
                     draw_circle(stdscr, sy, sx, preview_radius, scale, float(illum_val), 
                                 color_attr, has_rings, true_and_real_ring_attr)
-                if focused_body == "ISS":
+                if isinstance(body, EarthSatellite):
                     dist_str = f"{(current_dist.km):.1f} km"
                 else:
                     dist_str = f"{(current_dist.au):.5f} AU"
