@@ -249,8 +249,12 @@ def main(stdscr):
             display_mode = 2 # satellites only
         if key == ord('d'):
             display_mode = 0 # default (everything)
-        if key == ord('m') and is_locked and isinstance(bodies[focused_body], EarthSatellite):
-            display_map(stdscr, bodies[focused_body], ts)
+        if key == ord('m'): # map viexw
+            if focused_body in bodies and isinstance(bodies[focused_body], EarthSatellite):
+                display_map(stdscr, bodies[focused_body], ts)
+            else:
+                all_sats = [obj for obj in bodies.values() if isinstance(obj, EarthSatellite)]
+                display_map(stdscr, all_sats, ts)
             continue
         if key == ord('q'): break
         if key == ord('e'):
