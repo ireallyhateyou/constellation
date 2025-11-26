@@ -12,6 +12,7 @@ from skyfield import almanac
 from skyfield.api import Star, load, wgs84
 from skyfield.data import hipparcos
 from skyfield.projections import build_stereographic_projection
+from skyfield.sgp4lib import EarthSatellite
 # internal modules
 from renderer import s_addch, start_menu, draw_circle, draw_iss, LOCATIONS
 from data_loader import load_data
@@ -116,12 +117,13 @@ def main(stdscr):
         drawn_labels = {} # reset
         for name, body in bodies.items():
             current_dist = None
-            if name == "ISS":
+            if isinstance(body, EarthSatellite):
+                # observation for satellites
                 topocentric = (body - topos_observer).at(t)
                 az_ang, alt_ang, current_dist = topocentric.altaz()
                 astrometric = observer.at(t).from_altaz(alt_degrees=alt_ang.degrees, az_degrees=az_ang.degrees)
             else:
-                # observation for planets
+                # observation for planets and stars
                 observation = observer.at(t).observe(body)
                 astrometric = observation.apparent()
                 current_dist = observation.distance()  
@@ -151,7 +153,7 @@ def main(stdscr):
             elif name == "Neptune":
                 color_attr = curses.color_pair(7)
                 ring_attr = curses.color_pair(1)
-            elif name == "ISS":
+            elif isinstance(body, EarthSatellite):
                 color_attr = curses.color_pair(8) | curses.A_BOLD
             illum_val = 1.0
             if name == "Moon":
@@ -185,8 +187,10 @@ def main(stdscr):
                         if (int(sy)+dy) in drawn_labels and (int(sx)+dx) in drawn_labels[int(sy)+dy]:
                             is_occupied = True
                  # don't show satelites since they dont exist in relation to the moon but rather the sun
-                if not is_occupied and name != "ISS":
-                    if fov > 5.0:
+                if not is_occupied:
+                    if isinstance(body, EarthSatellite): 
+                        s_addch(stdscr, sy, sx, '✜', color_attr)
+                    elif fov > 5.0:
                         # planet marker
                         s_addch(stdscr, sy, sx, '●', curses.A_BOLD | color_attr)
                     else:
