@@ -200,6 +200,8 @@ def main(stdscr):
                         s_addch(stdscr, sy, sx, '●', curses.A_BOLD | color_attr)
                     else:
                         # zoomed shows name
+                        if isinstance(body, EarthSatellite) and display_mode == 1: continue
+                        if not isinstance(body, EarthSatellite) and display_mode == 2: continue
                         if 0 <= sy < h and 0 <= sx < w - len(name):
                             try: stdscr.addstr(int(sy), int(sx), name, curses.A_BOLD | color_attr)
                             except: pass
