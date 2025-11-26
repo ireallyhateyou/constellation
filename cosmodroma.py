@@ -188,7 +188,7 @@ def main(stdscr):
                             is_occupied = True
                  # don't show satelites since they dont exist in relation to the moon but rather the sun
                 if not is_occupied:
-                    if isinstance(body, EarthSatellite): 
+                    if isinstance(body, EarthSatellite) and fov > 5.0: 
                         s_addch(stdscr, sy, sx, '✜', color_attr)
                     elif fov > 5.0:
                         # planet marker
