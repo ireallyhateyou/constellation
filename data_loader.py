@@ -22,6 +22,13 @@ def load_data(stdscr, h, w, lat=40.7128, long=-74.0060):
                "Neptune": planets["neptune barycenter"],
                "Moon": planets["moon"], "Sun": planets["sun"], "ISS": iss}
 
+    ## satellite data
+    ## NORAD
+    stdscr.addstr(h//2 + 1, w//2 - 29, "downloading NORAD data...")
+    stdscr.refresh()
+    satellites = load.tle_file('https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle')
+    sat_dict = {s.name: s for s in satellites}
+
     ## star data
     ## hipparcos
     stdscr.clear()

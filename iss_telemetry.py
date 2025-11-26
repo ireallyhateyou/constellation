@@ -25,7 +25,8 @@ class TelemetryListener:
         item_id = update.getItemName()
         value = update.getValue("Value")
         readable_name = iss_map.get(item_id, item_id) # fetch name from map
-        
+
+        # try if it can be converted into float    
         try:
             float_value = float(value)
             if "temperature" in readable_name.lower():
