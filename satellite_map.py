@@ -61,7 +61,7 @@ def display_map(stdscr, object, ts):
     
     while True:
         timestamp = ts.now()
-        geocentric = object.at(t)
+        geocentric = object.at(timestamp)
         subpoint = wgs84.subpoint(geocentric)
         current_lat = subpoint.latitude.degrees
         current_lon = subpoint.longitude.degrees
