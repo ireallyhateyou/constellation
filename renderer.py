@@ -64,8 +64,18 @@ def draw_satellite(stdscr, name, y, x, color_attr):
     lines = ascii_art.splitlines()
     h_ascii = len(lines)
     w_ascii = max(len(line) for line in lines)
-    start_y = int(y - h_ascii / 2) 
-    start_x = int(x - w_ascii / 2)
+
+    y_offset = h_ascii / 2
+    x_offset = w_ascii / 2
+    
+    if h_ascii % 2 == 0:
+        y_offset += 0.5 
+        
+    if w_ascii % 2 == 0:
+        x_offset += 0.5
+
+    start_y = int(y - y_offset) 
+    start_x = int(x - x_offset)
     
     for i, line in enumerate(lines):
         for j, char in enumerate(line):
