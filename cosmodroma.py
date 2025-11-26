@@ -33,8 +33,9 @@ def main(stdscr):
     scale = " .:!+*$#@"
     preview_radius = 5
     deepzoom_fov = 0.041 # fov required for focus
-    focused_body = "ISS" # body we focus on
-
+    focused_body = "Sun" # body we focus on
+    display_mode = 0
+    
     # colours
     if curses.has_colors():
         curses.start_color()
@@ -189,9 +190,13 @@ def main(stdscr):
                  # don't show satelites since they dont exist in relation to the moon but rather the sun
                 if not is_occupied:
                     if isinstance(body, EarthSatellite) and fov > 5.0: 
+                        if display_mode == 1:
+                            continue
                         s_addch(stdscr, sy, sx, '✜', color_attr)
                     elif fov > 5.0:
                         # planet marker
+                        if display_mode == 2:
+                            continue
                         s_addch(stdscr, sy, sx, '●', curses.A_BOLD | color_attr)
                     else:
                         # zoomed shows name
@@ -220,7 +225,7 @@ def main(stdscr):
                     except: pass
 
         ### status bar
-        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'q' quit"
+        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'p/o/d' filter, 'q' quit"
         status_focus = f"'s' unzoom, 'left/right' showcase planets, 'e' change target" 
         if is_locked and isinstance(bodies[focused_body], EarthSatellite):
             status_focus = f"{status_focus}, 'm' map view"
@@ -236,6 +241,12 @@ def main(stdscr):
 
         ## input
         key = stdscr.getch()
+        if key == ord('p'):
+            display_mode = 1 # planets only
+        if key == ord('o'):
+            display_mode = 2 # satellites only
+        if key == ord('d'):
+            display_mode = 0 # default (everything)
         if key == ord('m') and is_locked and isinstance(bodies[focused_body], EarthSatellite):
             display_map(stdscr, bodies[focused_body], ts)
             continue

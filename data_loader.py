@@ -9,6 +9,7 @@ def load_data(stdscr, h, w, lat=40.7128, long=-74.0060):
     earth = planets["earth"]
     observer = earth + wgs84.latlon(lat, long)
     topos_observer = wgs84.latlon(lat, long)
+
     ## satellite data
     ## NORAD
     stdscr.addstr(h//2 + 1, w//2 - 29, "downloading NORAD data...")
