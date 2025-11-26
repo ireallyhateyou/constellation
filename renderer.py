@@ -13,6 +13,16 @@ iss_ascii = """
                              
 """
 
+hubble_ascii = """
+
+     ______________
+   C(              |;
+     |_____________| 
+           !
+           0
+                         
+"""
+
 tiangong_ascii = """
 
           ##______##               
@@ -46,6 +56,8 @@ def s_addch(stdscr, y, x, char, attr=0): # safe character drawing
 def draw_satellite(stdscr, name, y, x, color_attr):
     if name == "Tiangong":
         ascii_art = tiangong_ascii
+    elif name == "Hubble":
+        ascii_art = hubble_ascii
     else:
         ascii_art = iss_ascii
     lines = ascii_art.splitlines()
