@@ -310,7 +310,11 @@ def main(stdscr):
                     focused_body = closest_body_in_view
                     new_fov = deepzoom_fov 
             fov = new_fov
-        if key == ord('s'): fov = min(120, fov * 1.1)
+        if key == ord('s'): 
+            if is_locked:
+                fov = 5.0 # break focus & revert to map view
+            else:
+                fov = min(120, fov * 1.1)
         azimuth %= 360 # make azimuth roll back
 
 if __name__ == "__main__":
