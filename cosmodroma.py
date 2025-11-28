@@ -227,10 +227,8 @@ def main(stdscr):
                     except: pass
 
         ### status bar
-        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'p/o/d' filter, 'q' quit"
-        status_focus = f"'s' unzoom, 'left/right' showcase planets, 'e' change target" 
-        if is_locked and isinstance(bodies[focused_body], EarthSatellite):
-            status_focus = f"{status_focus}, 'm' map view"
+        status = f"Az:{azimuth:.1f} Alt:{alt:.1f} Zoom:{fov:.3f} | 'w/s' zoom, 'e' target, 'p/o/d' filter, 'm' map view, 'q' quit"
+        status_focus = f"'s' unzoom, 'left/right' showcase planets, 'e' change target"
         try: stdscr.addstr(0, 0, status_focus[:w-1] if is_locked else status[:w-1], curses.A_REVERSE)
         except: pass
 
