@@ -15,15 +15,16 @@ def load_data(stdscr, h, w, lat=40.7128, long=-74.0060):
     stdscr.addstr(h//2 + 1, w//2 - 29, "downloading NORAD data...")
     stdscr.refresh()
     sat_file = load.tle_file('https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle')
-    sat_dict = {s.name: s for s in sat_file}
     satellites = {}
-    for name, sat in sat_dict.items():
-        if "ISS" in name and "ZARYA" in name: satellites["ISS"] = sat
-        elif "HST" in name: satellites["Hubble"] = sat
-        elif "TIANHE" in name: satellites["Tiangong"] = sat
-        elif "CHANDRAYAAN" in name: satellites["Chandrayaan-2"] = sat
-        elif "SRMSAT" in name: satellites["SRMSAT"] = sat
-        elif "ENVIRO" in name: satellites["EnviroSat"] = sat
+    count = 0
+    for sat in sat_file:
+        name = sat.name.upper()
+        # keep known satellites
+        if "ISS" in name or "HST" in name or "TIANHE" in name:
+            satellites[sat.name] = sat
+        elif count < 20: 
+            satellites[sat.name] = sat
+            count += 1
 
     ## planetary data
     bodies = { "Mars": planets["mars"], "Venus": planets["venus"],
