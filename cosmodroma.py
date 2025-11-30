@@ -256,40 +256,33 @@ def main(stdscr):
             continue
         if key == ord('q'): break
         if key == ord('e'):
-            # TODO: make a way that doesn't fkn restore to terminal ffs
+            curses.curs_set(1) 
+            prompt = "Target (ISS, Moon, Sun, etc...): "
+    
+            # add prompt
+            stdscr.attron(curses.color_pair(1) | curses.A_REVERSE)
+            stdscr.addstr(h//2, w//2 - 10, " " * 30) 
+            stdscr.addstr(h//2, w//2 - 8, prompt)
+            stdscr.attroff(curses.A_REVERSE)
+            
+            # capture inputs
+            curses.echo()
             try:
-                curses.nocbreak()
-                stdscr.keypad(False)
-                curses.echo()
-                curses.curs_set(1)
-                curses.endwin()
-                try:
-                    # WHY
-                    target_name = input("Enter target name (Moon, Mars, ISS, Sun): ").strip().title()
-                    if target_name.upper() == "ISS": target_name = "ISS"
-                except Exception:
-                    target_name = ""
-            finally:
-                stdscr = curses.initscr() # new instance
-                curses.noecho()
-                curses.cbreak()
-                stdscr.keypad(True)
-                try:
-                    curses.curs_set(0)
-                except:
-                    pass
-                stdscr.nodelay(1)
-                stdscr.clear()
-                stdscr.refresh()
-                try:
-                    sh, sw = stdscr.getmaxyx()
-                    h, w = sh, sw
-                except:
-                    pass
+                input_bytes = stdscr.getstr(h//2, w//2 + len(prompt) - 8, 15)
+                target_name = input_bytes.decode('utf-8').strip().title()
+            except Exception:
+                target_name = ""
+            
+            curses.noecho() 
+            curses.curs_set(0) 
+            # handle specific casings
+            if target_name.upper() == "ISS" or "international" in target_name.lower(): target_name = "ISS"
+            if target_name.upper() == "HST" or "hubble" in target_name.lower(): target_name = "Hubble"
+
             if target_name in bodies:
                 is_locked = True
                 focused_body = target_name
-                fov = deepzoom_fov # lol
+                fov = deepzoom_fov # lmao
             continue
         if is_locked:
             if key == curses.KEY_RIGHT:
