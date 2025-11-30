@@ -20,8 +20,12 @@ def load_data(stdscr, h, w, lat=40.7128, long=-74.0060):
     for sat in sat_file:
         name = sat.name.upper()
         # keep known satellites
-        if "ISS" in name or "HST" in name or "TIANHE" in name:
-            satellites[sat.name] = sat
+        if "ISS" in name:
+            satellites["ISS"] = sat
+        elif "HST" in name:
+            satellites["Hubble"] = sat
+        elif "TIANHE" in name:
+            satellites["TIANHE"] = sat
         elif count < 20: 
             satellites[sat.name] = sat
             count += 1

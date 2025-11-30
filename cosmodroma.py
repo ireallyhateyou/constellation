@@ -256,33 +256,56 @@ def main(stdscr):
             continue
         if key == ord('q'): break
         if key == ord('e'):
-            curses.curs_set(1) 
-            prompt = "Target (ISS, Moon, Sun, etc...): "
-    
+            curses.curs_set(1)
+            prompt = "Target: "
             # add prompt
             stdscr.attron(curses.color_pair(1) | curses.A_REVERSE)
-            stdscr.addstr(h//2, w//2 - 10, " " * 30) 
-            stdscr.addstr(h//2, w//2 - 8, prompt)
+            stdscr.addstr(h//2, w//2 - 15, " " * 30) 
+            stdscr.addstr(h//2, w//2 - 13, prompt)
             stdscr.attroff(curses.A_REVERSE)
             
             # capture inputs
-            curses.echo()
-            try:
-                input_bytes = stdscr.getstr(h//2, w//2 + len(prompt) - 8, 15)
-                target_name = input_bytes.decode('utf-8').strip().title()
-            except Exception:
-                target_name = ""
+            stdscr.nodelay(0) 
+            input_str = ""
+            while True:
+                char_code = stdscr.getch()
+                
+                # enter
+                if char_code in [10, 13]:
+                    break
+                # escape
+                elif char_code == 27:
+                    input_str = ""
+                    break
+                # backspace (unix and windows)
+                elif char_code in [8, 127, curses.KEY_BACKSPACE]:
+                    if len(input_str) > 0:
+                        input_str = input_str[:-1]
+                # printable characters
+                elif 32 <= char_code <= 126:
+                    if len(input_str) < 15: # len limit
+                        input_str += chr(char_code)
+                
+                # redraw
+                stdscr.attron(curses.color_pair(1) | curses.A_REVERSE)
+                stdscr.addstr(h//2, w//2 - 15, " " * 30) # clear line
+                stdscr.addstr(h//2, w//2 - 13, prompt + input_str)
+                stdscr.attroff(curses.A_REVERSE)
             
-            curses.noecho() 
-            curses.curs_set(0) 
-            # handle specific casings
+            stdscr.nodelay(1) 
+            curses.curs_set(0)
+            
+            target_name = input_str.strip().title()
+            # handle special casing
             if target_name.upper() == "ISS" or "international" in target_name.lower(): target_name = "ISS"
             if target_name.upper() == "HST" or "hubble" in target_name.lower(): target_name = "Hubble"
+            if target_name.upper() == "CSS" or "tiangong" in target_name.lower(): target_name = "Tiangong"
 
             if target_name in bodies:
                 is_locked = True
                 focused_body = target_name
-                fov = deepzoom_fov # lmao
+                fov = deepzoom_fov
+            
             continue
         if is_locked:
             if key == curses.KEY_RIGHT:
