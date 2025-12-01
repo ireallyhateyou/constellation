@@ -297,10 +297,10 @@ def main(stdscr):
             
             target_name = input_str.strip().title()
             # handle special casing
+            if target_name.upper() == "CSS" or "tian" in target_name.lower() or "chinese" in target_name.lower() : target_name = "Tiangong"
             if target_name.upper() == "ISS" or "international" in target_name.lower(): target_name = "ISS"
             if target_name.upper() == "HST" or "hubble" in target_name.lower(): target_name = "Hubble"
-            if target_name.upper() == "CSS" or "tiangong" in target_name.lower(): target_name = "Tiangong"
-
+            if target_name.upper() == "COPERNICUS": target_name = "Copernicus"
             if target_name in bodies:
                 is_locked = True
                 focused_body = target_name
