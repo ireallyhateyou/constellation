@@ -13,6 +13,14 @@ iss_ascii = """
                              
 """
 
+copernicus_ascii = """
+
+   |############|  ___  |############|
+   |############|<|   |>|############|
+           _______|___|_______
+
+"""
+
 hubble_ascii = """
 
      ______________
@@ -58,6 +66,8 @@ def draw_satellite(stdscr, name, y, x, color_attr):
         ascii_art = tiangong_ascii
     elif name == "Hubble":
         ascii_art = hubble_ascii
+    elif name == "Copernicus":
+        ascii_art = copernicus_ascii
     else:
         ascii_art = iss_ascii
 
